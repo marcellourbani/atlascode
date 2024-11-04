@@ -385,6 +385,12 @@
                 "category": "Atlassian"
             },
             {
+                "command": "atlascode.bb.togglediffNormalize",
+                "title": "Normalize files",
+                "icon": "$(law)",
+                "category": "Atlassian"
+            },
+            {
                 "command": "atlascode.debug.bitbucketSites",
                 "title": "Show Bitbucket sites info",
                 "category": "Atlassian"
@@ -456,6 +462,11 @@
                     "command": "atlascode.bb.editThisFile",
                     "when": "resourceScheme == atlascode.bbpr && config.atlascode.bitbucket.enabled",
                     "group": "navigation"
+                },
+                {
+                    "command": "atlascode.bb.togglediffNormalize",
+                    "group": "navigation",
+                    "when": "isInDiffEditor && resourceScheme == atlascode.bbpr && atlascode:IsNormalizerEnabled"
                 }
             ],
             "editor/context": [
@@ -785,6 +796,10 @@
                 },
                 {
                     "command": "atlascode.bb.toggleCommentsVisibility",
+                    "when": "false"
+                },
+                {
+                    "command": "atlascode.bb.togglediffNormalize",
                     "when": "false"
                 },
                 {
@@ -1501,7 +1516,7 @@
         "@types/terser-webpack-plugin": "^2.2.0",
         "@types/turndown": "^5.0.1",
         "@types/uuid": "^3.4.7",
-        "@types/vscode": "^1.53.0",
+        "@types/vscode": "^1.77.0",
         "@types/webpack": "^4.41.11",
         "@types/webpack-manifest-plugin": "^2.1.0",
         "@types/websocket": "^1.0.0",
