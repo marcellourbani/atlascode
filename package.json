@@ -10,7 +10,7 @@
         "builds",
         "pull requests"
     ],
-    "version": "0.0.0",
+    "version": "3.0.11",
     "publisher": "atlassian",
     "license": "SEE LICENSE IN LICENSE",
     "homepage": "https://bitbucket.org/atlassianlabs/atlascode/src/main/README.md",
