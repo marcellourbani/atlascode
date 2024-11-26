@@ -10,9 +10,9 @@
         "builds",
         "pull requests"
     ],
-    "version": "4.0.2",
+    "version": "4.0.3",
     "files": [
-        "atlascode-4.0.2.vsix"
+        "atlascode-4.0.3.vsix"
     ],
     "publisher": "atlassian",
     "license": "SEE LICENSE IN LICENSE",
