@@ -10,7 +10,10 @@
         "builds",
         "pull requests"
     ],
-    "version": "3.0.11",
+    "version": "4.0.2",
+    "files": [
+        "atlascode-4.0.2.vsix"
+    ],
     "publisher": "atlassian",
     "license": "SEE LICENSE IN LICENSE",
     "homepage": "https://github.com/atlassian/atlascode/blob/main/HOMEPAGE.md",
@@ -71,6 +74,7 @@
         "devcompile": "npm-run-all --parallel devcompile:react devcompile:extension",
         "devcompile:react": "webpack --mode development --config webpack.react.dev.js",
         "devcompile:extension": "webpack --mode development --config webpack.extension.dev.js",
+        "prepack": "npx vsce package --allow-star-activation --baseContentUrl https://bitbucket.org/atlassianlabs/atlascode/src/main/ $npm_package_version",
         "release:stable": "scripts/release.sh",
         "watch": "concurrently -r \"npm:watch:*\"",
         "watch:extension": "WATCH=true webpack --mode development --config webpack.react.dev.js --progress --watch",
