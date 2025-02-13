@@ -3,7 +3,7 @@ import { CommandContext, setCommandContext } from './constants';
 
 interface CodeNormalizer {
     isRelevant: (u: Uri) => boolean;
-    normalize: (code: string, uri: Uri) => string;
+    normalize: (code: string, uri: Uri) => string | Promise<string>;
 }
 
 const normalizers: CodeNormalizer[] = [];
