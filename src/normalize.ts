@@ -1,5 +1,6 @@
 import { commands, TabInputTextDiff, TextEditor, Uri, window } from 'vscode';
-import { CommandContext, setCommandContext } from './constants';
+import { CommandContext } from './constants';
+import { Container } from './container';
 
 interface CodeNormalizer {
     isRelevant: (u: Uri) => boolean;
@@ -7,6 +8,10 @@ interface CodeNormalizer {
 }
 
 const normalizers: CodeNormalizer[] = [];
+
+function setCommandContext(key: CommandContext | string, value: any) {
+    return commands.executeCommand('setContext', key, value);
+}
 
 const registerCodeNormalizer = (normalizer: CodeNormalizer) => {
     if (normalizers.indexOf(normalizer) < 0) {
@@ -43,7 +48,12 @@ export const toggleDiffNormalize = () => {
         const tab = window.tabGroups.activeTabGroup.activeTab;
         if (tab?.input instanceof TabInputTextDiff) {
             const { original, modified } = tab.input;
-            return commands.executeCommand<void>('vscode.diff', toggleNorm(original), toggleNorm(modified), tab.label);
+            const controller = Container.bitbucketContext.prCommentController;
+            const origN = toggleNorm(original);
+            const modifN = toggleNorm(modified);
+            controller.provideComments(origN);
+            controller.provideComments(modifN);
+            return commands.executeCommand<void>('vscode.diff', origN, modifN, tab.label);
         }
     } catch (error) {}
     return;
