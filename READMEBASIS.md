@@ -18,19 +18,27 @@ npm login --registry https://npm.bti.local
 
 To publish the extension in the basis technologies repository:
 
-1) bump the version in package.json, both in files and verison keys:
+1) bump the version in package.json:
 
-   ```json
-    {
-        "version": "4.0.2",
-        "files": [ "atlascode-4.0.2.vsix" ]
-    }
-    ```
+Can be done with CLI:
+
+````bash
+npm version patch
+```
+
+...or manually:
+
+```json
+{
+    "version": "4.0.5"
+}
+```
+
 
 2) publish it:
 
    ```bash
-   npm publish
+   ts-node publish.ts
    ```
 
 Keep in mind basis version is fake: 4.0 is based on 3.0.11
