@@ -1,17 +1,12 @@
 import { commands, TabInputTextDiff, TextEditor, Uri, window } from 'vscode';
-import { CommandContext } from './constants';
 import { Container } from './container';
-
+import { setCommandContext, CommandContext } from './commandContext';
 interface CodeNormalizer {
     isRelevant: (u: Uri) => boolean;
     normalize: (code: string, uri: Uri) => string | Promise<string>;
 }
 
 const normalizers: CodeNormalizer[] = [];
-
-function setCommandContext(key: CommandContext | string, value: any) {
-    return commands.executeCommand('setContext', key, value);
-}
 
 const registerCodeNormalizer = (normalizer: CodeNormalizer) => {
     if (normalizers.indexOf(normalizer) < 0) {
