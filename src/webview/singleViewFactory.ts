@@ -119,21 +119,34 @@ export class SingleWebview<FD, R> implements ReactWebview<FD> {
             const { id, site, product } = this._controller.screenDetails();
             this._analyticsApi.fireViewScreenEvent(id, site, product);
         } else {
+            if (this._controller) {
+                this._controller.update(factoryData);
+                this._panel.title = this._controller.title();
+            }
+
             this._panel.webview.html = this._controllerFactory.webviewHtml(
                 this._extensionPath,
                 this._panel.webview.asWebviewUri(Uri.file(this._extensionPath)),
                 this._panel.webview.cspSource,
             );
             this._panel.reveal(column ? column : ViewColumn.Active); // , false);
-            if (this._controller) {
-                this._controller.update(factoryData);
-            }
         }
 
         // Send feature gates to the panel in a message
-        const featureFlags = await FeatureFlagClient.evaluateFeatures();
-        console.log(`FeatureGates: sending ${JSON.stringify(featureFlags)}`);
-        this.postMessage({ command: CommonMessageType.UpdateFeatureFlags, featureFlags: featureFlags });
+        this.fireFeatureGates();
+        this.fireExperimentGates();
+    }
+
+    private async fireFeatureGates() {
+        const featureGates = FeatureFlagClient.featureGates;
+        console.log(`FeatureGates: sending ${JSON.stringify(featureGates)}`);
+        this.postMessage({ command: CommonMessageType.UpdateFeatureFlags, featureFlags: featureGates });
+    }
+
+    private async fireExperimentGates() {
+        const experimentValues = FeatureFlagClient.experimentValues;
+        console.log(`ExperimentValues: sending ${JSON.stringify(experimentValues)}`);
+        this.postMessage({ command: CommonMessageType.UpdateExperimentValues, experimentValues });
     }
 
     private onViewStateChanged(e: WebviewPanelOnDidChangeViewStateEvent) {

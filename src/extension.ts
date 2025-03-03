@@ -24,6 +24,7 @@ import { GitExtension } from './typings/git';
 import { pid } from 'process';
 import { startListening } from './atlclients/negotiate';
 import { api } from './normalize';
+import { FeatureFlagClient } from './util/featureFlags';
 
 const AnalyticDelay = 5000;
 
@@ -167,4 +168,6 @@ async function sendAnalytics(version: string, globalState: Memento) {
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+    FeatureFlagClient.dispose();
+}

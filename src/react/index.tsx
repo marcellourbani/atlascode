@@ -13,10 +13,12 @@ import { createVSCodeTheme } from './vscode/theme/vscodeTheme';
 
 // @ts-ignore
 // __webpack_public_path__ is used to set the public path for the js files - https://webpack.js.org/guides/public-path/
+// eslint-disable-next-line no-var
 declare var __webpack_public_path__: string;
+// eslint-disable-next-line no-unused-vars
 __webpack_public_path__ = `${document.baseURI!}build/`;
 
-const routes = {
+const routes: Record<string, any> = {
     atlascodeSettingsV2: React.lazy(
         () => import(/* webpackChunkName: "atlascodeSettingsV2" */ './atlascode/config/ConfigPage'),
     ),

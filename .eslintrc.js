@@ -53,12 +53,26 @@ module.exports = {
                 ],
             },
         ],
+        "no-unused-vars": ["error", {
+            "vars": "all",
+            "args": "none",
+            "caughtErrors": "all",
+            "ignoreRestSiblings": false,
+        }],
         'brace-style': 'off',
+        'no-throw-literal': 'error',
+        'no-var': 'error',
+        'prefer-const': 'error',
+        'no-cond-assign': 'error',
+        'no-multi-assign': 'error',
+        'no-unused-expressions': ['error', {
+            "allowShortCircuit": true,
+            "allowTernary": true,
+        }],
         curly: 'error',
         eqeqeq: ['error', 'always'],
         semi: 'off',
         '@stylistic/js/semi': ['error', 'always'],
-        'no-throw-literal': 'error',
     },
     settings: {
         react: {

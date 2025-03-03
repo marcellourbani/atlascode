@@ -19,6 +19,7 @@ export interface RemoveAuthInfoEvent extends AuthInfoEvent {
     type: AuthChangeType.Remove;
     product: Product;
     credentialId: string;
+    host: string;
 }
 
 export interface Product {
@@ -41,6 +42,7 @@ export enum OAuthProvider {
     BitbucketCloudStaging = 'bbcloudstaging',
     JiraCloud = 'jiracloud',
     JiraCloudStaging = 'jiracloudstaging',
+    JiraCloudRemote = 'jiracloudremote',
 }
 export interface AuthInfoV1 {
     access: string;
@@ -118,6 +120,10 @@ export interface DetailedSiteInfo extends SiteInfo {
     isCloud: boolean;
     userId: string;
     credentialId: string;
+}
+
+export function getSiteInfoKey(site: DetailedSiteInfo): string {
+    return `${site.product.key} - ${site.host} - ${site.credentialId}`;
 }
 
 // You MUST send source

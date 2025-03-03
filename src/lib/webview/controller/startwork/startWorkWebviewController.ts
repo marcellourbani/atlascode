@@ -107,7 +107,7 @@ export class StartWorkWebviewController implements WebviewController<StartWorkIs
                 ...this.api.getStartWorkConfig(),
             });
         } catch (e) {
-            let err = new Error(`error updating start work page: ${e}`);
+            const err = new Error(`error updating start work page: ${e}`);
             this.logger.error(err);
             this.postMessage({ type: CommonMessageType.Error, reason: formatError(e) });
         } finally {
@@ -134,6 +134,7 @@ export class StartWorkWebviewController implements WebviewController<StartWorkIs
                             msg.targetBranch,
                             msg.sourceBranch,
                             msg.upstream,
+                            msg.pushBranchToRemote,
                         );
                     }
                     this.postMessage({
@@ -142,7 +143,7 @@ export class StartWorkWebviewController implements WebviewController<StartWorkIs
                         branch: msg.branchSetupEnabled ? msg.targetBranch : undefined,
                         upstream: msg.branchSetupEnabled ? msg.upstream : undefined,
                     });
-                    this.analytics.fireIssueWorkStartedEvent(this.initData.issue.siteDetails);
+                    this.analytics.fireIssueWorkStartedEvent(this.initData.issue.siteDetails, msg.pushBranchToRemote);
                 } catch (e) {
                     this.logger.error(new Error(`error executing start work action: ${e}`));
                     this.postMessage({
@@ -193,7 +194,7 @@ export class StartWorkWebviewController implements WebviewController<StartWorkIs
                         imgData: imgData,
                         nonce: msg.nonce,
                     } as any);
-                } catch (e) {
+                } catch {
                     this.logger.error(new Error(`error fetching image: ${msg.url}`));
                     this.postMessage({
                         type: 'getImageDone',

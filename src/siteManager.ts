@@ -49,7 +49,7 @@ export class SiteManager extends Disposable {
     }
 
     public addOrUpdateSite(newSite: DetailedSiteInfo) {
-        let allSites = this.readSitesFromGlobalStore(newSite.product.key);
+        const allSites = this.readSitesFromGlobalStore(newSite.product.key);
         const oldSite = allSites?.find((site) => site.id === newSite.id && site.userId === newSite.userId);
         if (oldSite) {
             this.updateSite(oldSite, newSite);
@@ -96,7 +96,7 @@ export class SiteManager extends Disposable {
     }
 
     public updateSite(oldSite: DetailedSiteInfo, newSite: DetailedSiteInfo) {
-        let allSites = this.readSitesFromGlobalStore(newSite.product.key);
+        const allSites = this.readSitesFromGlobalStore(newSite.product.key);
         if (allSites) {
             const oldSiteIndex = allSites.findIndex((site) => site.id === oldSite.id && site.userId === oldSite.userId);
             if (oldSiteIndex !== -1) {
@@ -111,7 +111,9 @@ export class SiteManager extends Disposable {
 
     onDidAuthChange(e: AuthInfoEvent) {
         if (isRemoveAuthEvent(e)) {
-            const deadSites = this.getSitesAvailable(e.product).filter((site) => site.credentialId === e.credentialId);
+            const deadSites = this.getSitesAvailable(e.product).filter(
+                (site) => site.credentialId === e.credentialId && site.host === e.host,
+            );
             deadSites.forEach((s) => this.removeSite(s));
             if (deadSites.length > 0) {
                 this._onDidSitesAvailableChange.fire({
@@ -175,7 +177,7 @@ export class SiteManager extends Disposable {
         if (productKey) {
             return this.getFirstAAIDForProduct(productKey);
         }
-        let userId = this.getFirstAAIDForProduct(ProductJira.key);
+        const userId = this.getFirstAAIDForProduct(ProductJira.key);
         if (userId) {
             return userId;
         }
