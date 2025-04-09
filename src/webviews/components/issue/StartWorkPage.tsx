@@ -16,6 +16,9 @@ import {
 import * as path from 'path';
 import * as React from 'react';
 import EdiText from 'react-editext';
+import { AnalyticsView } from 'src/analyticsTypes';
+import { AtlascodeErrorBoundary } from 'src/react/atlascode/common/ErrorBoundary';
+
 import { DetailedSiteInfo, emptySiteInfo } from '../../../atlclients/authInfo';
 import { BitbucketIssue, emptyBitbucketSite, SiteRemote } from '../../../bitbucket/model';
 import { CopyBitbucketIssueLink, OpenBitbucketIssueAction } from '../../../ipc/bitbucketIssueActions';
@@ -42,8 +45,6 @@ import Offline from '../Offline';
 import { WebviewComponent } from '../WebviewComponent';
 import NavItem from './NavItem';
 import { TransitionMenu } from './TransitionMenu';
-import { AtlascodeErrorBoundary } from 'src/react/atlascode/common/ErrorBoundary';
-import { AnalyticsView } from 'src/analyticsTypes';
 
 type Emit =
     | RefreshIssueAction
@@ -261,6 +262,7 @@ export default class StartWorkPage extends WebviewComponent<Emit, Accept, {}, St
             transition: this.state.transition,
             setupJira: this.state.jiraSetupEnabled,
             setupBitbucket: this.isEmptyRepo(this.state.repo) ? false : this.state.bitbucketSetupEnabled,
+            pushBranchToRemote: false,
         });
     };
 

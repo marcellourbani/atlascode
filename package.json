@@ -56,12 +56,14 @@
         "compile": "npm run clean && npm run compile:react && npm run compile:extension",
         "compile:extension": "NODE_OPTIONS=--openssl-legacy-provider webpack --mode production --config webpack.extension.prod.js",
         "compile:react": "NODE_OPTIONS=--openssl-legacy-provider webpack --mode production --config webpack.react.prod.js",
-        "postinstall": "cp ./scripts/githooks/pre-commit ./.git/hooks && patch-package",
+        "postinstall": "cp ./scripts/githooks/* ./.git/hooks && patch-package",
         "extension:clean": "rm -rf ./atlascode-*.vsix",
         "extension:package:prerelease": "npm run extension:clean && vsce package --pre-release --baseContentUrl https://raw.githubusercontent.com/atlassian/atlascode/main/",
         "extension:package": "npm run extension:clean && vsce package --baseContentUrl https://raw.githubusercontent.com/atlassian/atlascode/main/",
         "extension:install": "npm run extension:package && code --install-extension ./atlascode-*.vsix --force",
-        "test": "jest",
+        "test": "rm -rf coverage && npm run test:unit && npm run test:react && istanbul-merge --out coverage/coverage-final.json coverage/react/coverage-final.json coverage/unit/coverage-final.json && echo '\n\nTotal test coverage:' && nyc report --reporter clover --reporter lcov --reporter html --reporter text-summary -t coverage/ --report-dir coverage/",
+        "test:unit": "jest -c jest.unit.config.js",
+        "test:react": "jest -c jest.react.config.js",
         "test:e2e": "echo 'token length' && echo ${#ATLASCODE_TEST_USER_API_TOKEN} && npm run test:e2e:compile && e2e/scripts/run",
         "test:e2e:compile": "tsc --project e2e/tsconfig.e2e.json",
         "test:e2e:rerun": "npm run test:e2e:compile && e2e/scripts/run --rerun",
@@ -99,6 +101,18 @@
     "contributes": {
         "commands": [
             {
+                "command": "atlascode.jira.todoIssue",
+                "title": "TO DO"
+            },
+            {
+                "command": "atlascode.jira.inProgressIssue",
+                "title": "IN PROGRESS"
+            },
+            {
+                "command": "atlascode.jira.doneIssue",
+                "title": "DONE"
+            },
+            {
                 "command": "atlascode.jira.createIssue",
                 "title": "Create Jira Issue",
                 "icon": {
@@ -110,6 +124,10 @@
             {
                 "command": "atlascode.jira.searchIssues",
                 "title": "Search Jira Issue Results",
+                "icon": {
+                    "dark": "resources/dark/search.svg",
+                    "light": "resources/light/search.svg"
+                },
                 "category": "Atlassian"
             },
             {
@@ -193,8 +211,28 @@
                 "category": "Atlassian"
             },
             {
-                "command": "atlascode.jira.refreshExplorer",
-                "title": "Refresh Jira Issues",
+                "command": "atlascode.jira.createNewJql",
+                "title": "Create new JQL filter",
+                "category": "Atlassian"
+            },
+            {
+                "command": "atlascode.jira.addJiraSite",
+                "title": "Add Jira Site",
+                "category": "Atlassian",
+                "shortTitle": "Add another Jira site"
+            },
+            {
+                "command": "atlascode.jira.refreshAssignedWorkItemsExplorer",
+                "title": "Refresh Assigned Work Items",
+                "icon": {
+                    "dark": "resources/dark/refresh.svg",
+                    "light": "resources/light/refresh.svg"
+                },
+                "category": "Atlassian"
+            },
+            {
+                "command": "atlascode.jira.refreshCustomJqlExplorer",
+                "title": "Refresh Custom JQL Filters",
                 "icon": {
                     "dark": "resources/dark/refresh.svg",
                     "light": "resources/light/refresh.svg"
@@ -208,7 +246,8 @@
                     "dark": "resources/dark/settings.svg",
                     "light": "resources/light/settings.svg"
                 },
-                "category": "Atlassian"
+                "category": "Atlassian",
+                "shortTitle": "View settings"
             },
             {
                 "command": "atlascode.jira.showIssueForKey",
@@ -442,9 +481,14 @@
         "views": {
             "atlascode-drawer": [
                 {
-                    "id": "atlascode.views.jira.customJql",
-                    "name": "Jira Issues",
-                    "when": "atlascode:jiraExplorerEnabled && config.atlascode.jira.enabled"
+                    "id": "atlascode.views.jira.assignedWorkItemsTreeView",
+                    "name": "Assigned Jira Work Items",
+                    "when": "atlascode:assignedIssueExplorerEnabled && config.atlascode.jira.enabled"
+                },
+                {
+                    "id": "atlascode.views.jira.customJqlTreeView",
+                    "name": "Custom Jql Filters",
+                    "when": "atlascode:assignedIssueExplorerEnabled && config.atlascode.jira.enabled && atlascode:customJQLExplorerEnabled && atlascode:isJiraAuthenticated"
                 },
                 {
                     "id": "atlascode.views.bb.pullrequestsTreeView",
@@ -538,18 +582,35 @@
             "view/title": [
                 {
                     "command": "atlascode.jira.createIssue",
-                    "when": "view =~ /(atlascode.views.jira.customJql)/ && atlascode:isJiraAuthenticated",
+                    "when": "view =~ /(atlascode.views.jira.assignedWorkItemsTreeView)/ && atlascode:isJiraAuthenticated",
                     "group": "navigation@1"
                 },
                 {
-                    "command": "atlascode.jira.refreshExplorer",
-                    "when": "view =~ /(atlascode.views.jira.customJql)/ && atlascode:isJiraAuthenticated",
+                    "command": "atlascode.jira.refreshAssignedWorkItemsExplorer",
+                    "when": "view == atlascode.views.jira.assignedWorkItemsTreeView && atlascode:isJiraAuthenticated",
                     "group": "navigation@2"
                 },
                 {
-                    "command": "atlascode.jira.showJiraIssueSettings",
-                    "when": "view =~ /(atlascode.views.jira.customJql)/",
+                    "command": "atlascode.jira.refreshCustomJqlExplorer",
+                    "when": "view == atlascode.views.jira.customJqlTreeView && atlascode:isJiraAuthenticated",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "atlascode.jira.searchIssues",
+                    "when": "view =~ /(atlascode.views.jira.customJqlTreeView|atlascode.views.jira.assignedWorkItemsTreeView)/ && atlascode:isJiraAuthenticated",
                     "group": "navigation@3"
+                },
+                {
+                    "command": "atlascode.jira.createNewJql",
+                    "when": "view =~ /(atlascode.views.jira.customJqlTreeView)/ && atlascode:isJiraAuthenticated"
+                },
+                {
+                    "command": "atlascode.jira.addJiraSite",
+                    "when": "view == atlascode.views.jira.assignedWorkItemsTreeView && atlascode:isJiraAuthenticated"
+                },
+                {
+                    "command": "atlascode.jira.showJiraIssueSettings",
+                    "when": "view =~ /(atlascode.views.jira.assignedWorkItemsTreeView|atlascode.views.jira.customJqlTreeView)/"
                 },
                 {
                     "command": "atlascode.bb.createPullRequest",
@@ -608,23 +669,38 @@
             ],
             "view/item/context": [
                 {
+                    "command": "atlascode.jira.todoIssue",
+                    "when": "viewItem =~ /(jiraIssue_todo|assignedJiraIssue_todo)/ && atlascode:isJiraAuthenticated",
+                    "group": "inline"
+                },
+                {
+                    "command": "atlascode.jira.inProgressIssue",
+                    "when": "viewItem =~ /(jiraIssue_inProgress|assignedJiraIssue_inProgress)/ && atlascode:isJiraAuthenticated",
+                    "group": "inline"
+                },
+                {
+                    "command": "atlascode.jira.doneIssue",
+                    "when": "viewItem =~ /(jiraIssue_done|assignedJiraIssue_done)/ && atlascode:isJiraAuthenticated",
+                    "group": "inline"
+                },
+                {
                     "command": "atlascode.jira.assignIssueToMe",
-                    "when": "viewItem == jiraIssue && atlascode:isJiraAuthenticated",
+                    "when": "viewItem =~ /(jiraIssue|jiraIssue_.+)/ && atlascode:isJiraAuthenticated",
                     "group": "jiraContextMenuGroup1"
                 },
                 {
                     "command": "atlascode.jira.startWorkOnIssue",
-                    "when": "viewItem == jiraIssue && atlascode:isJiraAuthenticated",
+                    "when": "viewItem =~ /(jiraIssue|assignedJiraIssue|jiraIssue_.+|assignedJiraIssue_.+)/ && atlascode:isJiraAuthenticated",
                     "group": "jiraContextMenuGroup1"
                 },
                 {
                     "command": "atlascode.viewInWebBrowser",
-                    "when": "viewItem == jiraIssue && atlascode:isJiraAuthenticated",
+                    "when": "viewItem =~ /(jiraIssue|assignedJiraIssue|jiraIssue_.+|assignedJiraIssue_.+)/ && atlascode:isJiraAuthenticated",
                     "group": "jiraContextMenuGroup1"
                 },
                 {
                     "command": "atlascode.jira.createIssue",
-                    "when": "viewItem == jiraIssue && atlascode:isJiraAuthenticated",
+                    "when": "viewItem =~ /(jiraIssue|assignedJiraIssue|jiraIssue_.+|assignedJiraIssue_.+)/ && atlascode:isJiraAuthenticated",
                     "group": "jiraContextMenuGroup2"
                 },
                 {
@@ -720,10 +796,6 @@
                 },
                 {
                     "command": "atlascode.bb.refreshPullRequests",
-                    "when": "false"
-                },
-                {
-                    "command": "atlascode.jira.refreshExplorer",
                     "when": "false"
                 },
                 {
@@ -952,6 +1024,12 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Enables the Jira Issue Explorer",
+                    "scope": "window"
+                },
+                "atlascode.jira.explorer.showCustomJql": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enables Custom Jql Explorer",
                     "scope": "window"
                 },
                 "atlascode.jira.explorer.showOpenIssues": {
@@ -1192,10 +1270,23 @@
                         "type": "string"
                     },
                     "default": [
-                        "TODO:",
-                        "BUG:",
-                        "FIXME:",
-                        "ISSUE:"
+                        "TODO",
+                        "todo",
+                        "Todo",
+                        "ToDo",
+                        "BUG",
+                        "bug",
+                        "Bug",
+                        "FIXME",
+                        "fixme",
+                        "Fixme",
+                        "FixMe",
+                        "ISSUE",
+                        "issue",
+                        "Issue",
+                        "HACK",
+                        "hack",
+                        "Hack"
                     ],
                     "description": "Strings that will trigger the Jira issue create Code Lens",
                     "scope": "window"
@@ -1393,12 +1484,14 @@
         "@atlaskit/checkbox": "^12.3.4",
         "@atlaskit/comment": "^10.3.0",
         "@atlaskit/datetime-picker": "^11.1.1",
+        "@atlaskit/dropdown-menu": "^12.26.5",
         "@atlaskit/feature-gate-js-client": "^4.20.0",
-        "@atlaskit/form": "^8.4.4",
+        "@atlaskit/form": "^11.2.0",
+        "@atlaskit/heading": "^4.3.1",
         "@atlaskit/icon": "^21.9.3",
+        "@atlaskit/icon-lab": "^2.8.0",
         "@atlaskit/inline-dialog": "^13.1.8",
-        "@atlaskit/logo": "^13.5.3",
-        "@atlaskit/lozenge": "^11.1.3",
+        "@atlaskit/lozenge": "^11.14.0",
         "@atlaskit/modal-dialog": "^12.1.0",
         "@atlaskit/page": "^12.0.7",
         "@atlaskit/page-header": "^10.2.2",
@@ -1408,27 +1501,29 @@
         "@atlaskit/select": "^15.2.4",
         "@atlaskit/spinner": "^15.1.3",
         "@atlaskit/table-tree": "^9.0.12",
-        "@atlaskit/theme": "^12.6.2",
+        "@atlaskit/tag": "^13.1.0",
+        "@atlaskit/textarea": "^7.1.0",
+        "@atlaskit/textfield": "^7.0.0",
+        "@atlaskit/theme": "^16.0.0",
+        "@atlaskit/tokens": "^3.3.2",
         "@atlaskit/tooltip": "^17.5.1",
         "@atlaskit/width-detector": "^3.0.6",
         "@atlassianlabs/guipi-core-components": "^0.1.2",
         "@atlassianlabs/guipi-core-controller": "^0.1.2",
         "@atlassianlabs/guipi-jira-components": "^0.1.2",
         "@atlassianlabs/jira-metaui-client": "^1.1.0",
-        "@atlassianlabs/jira-metaui-transformer": "^1.1.0",
         "@atlassianlabs/jira-pi-client": "^1.1.0",
         "@atlassianlabs/jira-pi-common-models": "^1.1.0",
         "@atlassianlabs/jira-pi-meta-models": "^1.1.0",
         "@atlassianlabs/pi-client-common": "^1.1.0",
-        "@date-io/date-fns": "^3.0.0",
-        "@devcontainers/cli": "^0.71.0",
         "@material-ui/core": "^4.9.14",
         "@material-ui/icons": "^4.9.1",
         "@material-ui/lab": "^4.0.0-alpha.52",
-        "@material-ui/pickers": "^3.3.10",
         "@material-ui/styles": "^4.10.0",
         "@segment/analytics-node": "^2.1.3",
+        "@testing-library/react": "^12.1.5",
         "@types/mustache": "^4.0.1",
+        "@vscode/webview-ui-toolkit": "^1.4.0",
         "awesome-debounce-promise": "^2.1.0",
         "axios": "^1.7.4",
         "axios-curlirize": "^1.3.4",
@@ -1438,13 +1533,12 @@
         "dotenv": "^16.4.5",
         "eslint-plugin-prettier": "^5.2.1",
         "eventemitter3": "^4.0.0",
-        "express": "^4.21.0",
+        "express": "^4.21.2",
         "fast-deep-equal": "^3.1.1",
         "filesize": "^4.1.2",
         "flatten-anything": "^2.0.1",
         "form-data": "^2.5.2",
         "git-url-parse": "^15.0.0",
-        "ini": "^1.3.8",
         "jwt-decode": "^3.1.2",
         "keytar": "^7.9.0",
         "lodash": "^4.17.21",
@@ -1455,7 +1549,6 @@
         "merge-anything": "^3.0.3",
         "mustache": "^4.0.1",
         "node-ipc": "^9.2.1",
-        "p-any": "^2.1.0",
         "p-cancelable": "^2.0.0",
         "p-queue": "^6.3.0",
         "p-retry": "^4.2.0",
@@ -1473,7 +1566,6 @@
         "prosemirror-mentions": "^1.0.0",
         "prosemirror-menu": "^1.1.4",
         "prosemirror-model": "^1.11.0",
-        "prosemirror-schema-basic": "^1.1.2",
         "prosemirror-state": "^1.3.3",
         "prosemirror-view": "^1.15.2",
         "react": "^16.13.1",
@@ -1486,44 +1578,34 @@
         "react-uid": "^2.2.0",
         "scheduler": "^0.19.0",
         "semver": "^7.6.3",
-        "simple-get": "^3.1.1",
         "slash": "^3.0.0",
         "ssl-root-cas": "^1.3.1",
         "styled-components": "^3.2.6",
-        "stylis": "^3.5.4",
-        "tough-cookie": "^4.1.3",
         "tunnel": "^0.0.6",
         "turndown": "^7.2.0",
-        "ua-parser-js": "^0.7.31",
         "use-constant": "^1.0.0",
         "uuid": "^3.4.0",
         "websocket": "^1.0.35"
     },
     "devDependencies": {
-        "@babel/core": "^7.25.0",
+        "@babel/core": "^7.26.9",
+        "@jest/globals": "^29.7.0",
         "@stylistic/eslint-plugin-js": "^2.8.0",
         "@types/analytics-node": "^3.1.7",
         "@types/chai": "^4",
-        "@types/deep-equal": "^1.0.1",
-        "@types/escape-string-regexp": "^1.0.0",
         "@types/filesize": "^4.1.0",
         "@types/git-url-parse": "^9.0.1",
-        "@types/glob": "^7.1.1",
         "@types/html-webpack-plugin": "^3.2.2",
-        "@types/jest": "^25.1.3",
-        "@types/jquery": "^3.3.23",
+        "@types/jest": "^29.5.14",
         "@types/lodash.debounce": "^4.0.6",
         "@types/lodash.orderby": "^4.6.6",
         "@types/lodash.truncate": "^4.4.6",
         "@types/mocha": "^10.0.10",
         "@types/node": "^18.16.19",
         "@types/node-ipc": "^9.2.0",
-        "@types/prosemirror-schema-basic": "^1.0.1",
         "@types/prosemirror-state": "^1.2.5",
         "@types/prosemirror-view": "^1.15.0",
         "@types/react": "^16.9.34",
-        "@types/react-beautiful-dnd": "^12.1.1",
-        "@types/react-dev-utils": "^9.0.4",
         "@types/react-dom": "^16.9.6",
         "@types/react-tabs": "^2.3.1",
         "@types/scheduler": "^0.16.1",
@@ -1537,12 +1619,10 @@
         "@types/websocket": "^1.0.0",
         "@typescript-eslint/eslint-plugin": "^8.7.0",
         "@typescript-eslint/parser": "^8.7.0",
-        "@vscode/test-electron": "^2.4.1",
         "@vscode/vsce": "^3.1.0",
         "ajv": "^8.17.1",
         "ajv-formats": "^3.0.1",
         "autoprefixer": "^10.4.20",
-        "babel-loader": "^9.2.1",
         "chai": "^4",
         "concurrently": "^9.1.2",
         "cross-env": "^7.0.2",
@@ -1554,23 +1634,25 @@
         "eslint-plugin-import": "^2.30.0",
         "eslint-plugin-react": "^7.36.0",
         "eslint-plugin-react-hooks": "^4.6.2",
+        "eslint-plugin-simple-import-sort": "^12.1.1",
         "fork-ts-checker-notifier-webpack-plugin": "^9.0.0",
         "fork-ts-checker-webpack-plugin": "^9.0.2",
         "html-webpack-plugin": "^5.6.0",
+        "istanbul-merge": "^2.0.0",
         "jest": "^29.7.0",
+        "jest-css-modules-transform": "^4.4.2",
+        "jest-environment-jsdom": "^29.7.0",
         "jest-mock-vscode": "^4.0.4",
-        "license-checker": "^25.0.1",
         "mini-css-extract-plugin": "^2.9.1",
         "npm-run-all": "^4.1.5",
+        "nyc": "^17.1.0",
         "ovsx": "^0.10.1",
         "patch-package": "^6.2.2",
         "postcss-flexbugs-fixes": "^5.0.2",
         "postcss-loader": "^8.1.1",
         "postcss-preset-env": "^10.0.5",
-        "postinstall-postinstall": "^2.0.0",
         "prettier": "^3.3.3",
         "pretty-quick": "^2.0.1",
-        "react-dev-utils": "^12.0.1",
         "source-map-loader": "^0.2.4",
         "speed-measure-webpack-plugin": "^1.5",
         "terser-webpack-plugin": "^5.3.0",
@@ -1579,7 +1661,7 @@
         "ts-node": "^8.8.2",
         "tsconfig-paths": "^3.9.0",
         "tsconfig-paths-webpack-plugin": "^3.2.0",
-        "typescript": "^5.4.0 <5.5.0",
+        "typescript": "^5.7.3",
         "vsce": "^2.15.0",
         "vscode-extension-tester": "^8.10.0",
         "vue": "^3.2.23",

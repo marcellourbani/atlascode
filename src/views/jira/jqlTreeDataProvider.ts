@@ -1,5 +1,6 @@
 import { isMinimalIssue, MinimalIssue, MinimalORIssueLink } from '@atlassianlabs/jira-pi-common-models';
 import { Command, Disposable, Event, EventEmitter, TreeItem } from 'vscode';
+
 import { DetailedSiteInfo, ProductJira } from '../../atlclients/authInfo';
 import { Commands } from '../../commands';
 import { JQLEntry } from '../../config/model';
@@ -10,6 +11,8 @@ import { BaseTreeDataProvider } from '../Explorer';
 import { AbstractBaseNode } from '../nodes/abstractBaseNode';
 import { IssueNode } from '../nodes/issueNode';
 import { SimpleJiraIssueNode } from '../nodes/simpleJiraIssueNode';
+
+// [mmura] TODO remove this file, it shouldn't be used anymore
 
 export abstract class JQLTreeDataProvider extends BaseTreeDataProvider implements AbstractBaseNode {
     public disposables: Disposable[] = [];

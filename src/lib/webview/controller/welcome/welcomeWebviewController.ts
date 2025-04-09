@@ -1,4 +1,5 @@
 import { defaultActionGuard } from '@atlassianlabs/guipi-core-controller';
+
 import { CommonActionType } from '../../../ipc/fromUI/common';
 import { WelcomeAction, WelcomeActionType } from '../../../ipc/fromUI/welcome';
 import { WebViewID } from '../../../ipc/models/common';
@@ -11,7 +12,10 @@ import { MessagePoster, WebviewController } from '../webviewController';
 import { WelcomeActionApi } from './welcomeActionApi';
 
 export class WelcomeWebviewController implements WebviewController<WelcomeInitMessage> {
-    private _isRefreshing: boolean;
+    public readonly requiredFeatureFlags = [];
+    public readonly requiredExperiments = [];
+
+    private _isRefreshing = false;
 
     constructor(
         private messagePoster: MessagePoster,
@@ -20,6 +24,8 @@ export class WelcomeWebviewController implements WebviewController<WelcomeInitMe
         private logger: Logger,
         private initData?: WelcomeInitMessage,
     ) {}
+
+    public onShown(): void {}
 
     public title(): string {
         return 'Atlassian Welcome';
@@ -45,7 +51,7 @@ export class WelcomeWebviewController implements WebviewController<WelcomeInitMe
                 ...this.initData!,
             });
         } catch (e) {
-            let err = new Error(`error updating welcome page: ${e}`);
+            const err = new Error(`error updating welcome page: ${e}`);
             this.logger.error(err);
             this.postMessage({ type: CommonMessageType.Error, reason: formatError(e) });
         } finally {

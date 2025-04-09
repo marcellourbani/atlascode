@@ -1,8 +1,9 @@
-import React, { useCallback } from 'react';
 // eslint-disable-next-line no-restricted-imports
 import { AnalyticsErrorBoundary, AnalyticsListener, UIAnalyticsEvent } from '@atlaskit/analytics-next';
-import { CommonActionType } from 'src/lib/ipc/fromUI/common';
-import { AnalyticsChannels, UIAnalyticsContext } from 'src/analyticsTypes';
+import React, { useCallback } from 'react';
+
+import { AnalyticsChannels, UIAnalyticsContext } from '../../../analyticsTypes';
+import { CommonActionType } from '../../../lib/ipc/fromUI/common';
 
 // Maximum limit for the simplified stack trace
 // We're using a high value deliberately for now, but it's arbitrary and can be changed in the future

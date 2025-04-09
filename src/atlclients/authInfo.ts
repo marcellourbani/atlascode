@@ -1,5 +1,3 @@
-'use strict';
-
 import { ATLASCODE_TEST_HOST } from '../../src/constants';
 
 export enum AuthChangeType {
@@ -41,6 +39,7 @@ export enum OAuthProvider {
     BitbucketCloudStaging = 'bbcloudstaging',
     JiraCloud = 'jiracloud',
     JiraCloudStaging = 'jiracloudstaging',
+    JiraCloudRemote = 'jiracloudremote',
 }
 export interface AuthInfoV1 {
     access: string;
@@ -118,6 +117,8 @@ export interface DetailedSiteInfo extends SiteInfo {
     isCloud: boolean;
     userId: string;
     credentialId: string;
+    /** Jira only -- Indicates if the site's schema contains a field named 'resolution' */
+    hasResolutionField: boolean;
 }
 
 // You MUST send source
@@ -168,6 +169,7 @@ export const emptySiteInfo: DetailedSiteInfo = {
     isCloud: true,
     userId: '',
     credentialId: '',
+    hasResolutionField: false,
 };
 
 export const emptyAccessibleResource: AccessibleResource = {

@@ -1,11 +1,11 @@
-import pAny from 'p-any';
 import pathlib from 'path';
+import { normalize } from 'src/normalize';
 import vscode from 'vscode';
+
 import { BitbucketContext } from '../bitbucket/bbContext';
 import { clientForSite } from '../bitbucket/bbUtils';
 import { Container } from '../container';
 import { PRFileDiffQueryParams } from './pullrequest/diffViewHelper';
-import { normalize } from 'src/normalize';
 
 //This class is responsible for fetching the text of a specific version of a file which may not be on your machine
 //Everytime the vscode.diff is invoked in this extension, it's using this file to fetch the data for both files.
@@ -30,7 +30,7 @@ export class GitContentProvider implements vscode.TextDocumentContentProvider {
             //Attempt to get the file content locally with a source-control manager and also try to fetch from Bitbucket
             //pAny returns the first successful result, so it will return the local one if you have this commit on your computer,
             //otherwise it will get it from the Bitbucket API (which takes longer)
-            content = await pAny([
+            content = await Promise.any([
                 (async () => {
                     const u: vscode.Uri = vscode.Uri.parse(repoUri);
                     const wsRepo = this.bbContext.getRepository(u);
@@ -42,7 +42,7 @@ export class GitContentProvider implements vscode.TextDocumentContentProvider {
                     const absolutePath = pathlib.join(scm.rootUri.fsPath, path);
                     try {
                         return await scm.show(commitHash, absolutePath);
-                    } catch (err) {
+                    } catch {
                         await scm.fetch(wsRepo!.mainSiteRemote.remote.name, branchName);
                         return await scm.show(commitHash, absolutePath);
                     }
@@ -53,7 +53,7 @@ export class GitContentProvider implements vscode.TextDocumentContentProvider {
                     return fileContent;
                 })(),
             ]);
-        } catch (err) {
+        } catch {
             vscode.window.showErrorMessage(
                 `We couldn't find ${path} at commit ${commitHash}. You may want to sync the branch with remote. Sometimes commits can disappear after a force-push.`,
             );

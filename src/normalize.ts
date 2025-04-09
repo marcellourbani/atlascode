@@ -1,6 +1,9 @@
 import { commands, TabInputTextDiff, TextEditor, Uri, window } from 'vscode';
+
+import { CommandContext, setCommandContext } from './commandContext';
 import { Container } from './container';
-import { setCommandContext, CommandContext } from './commandContext';
+import { Logger } from './logger';
+
 interface CodeNormalizer {
     isRelevant: (u: Uri) => boolean;
     normalize: (code: string, uri: Uri) => string | Promise<string>;
@@ -50,7 +53,9 @@ export const toggleDiffNormalize = () => {
             controller.provideComments(modifN);
             return commands.executeCommand<void>('vscode.diff', origN, modifN, tab.label);
         }
-    } catch (error) {}
+    } catch (error) {
+        Logger.debug('[Failed to toggle normalizer]', error);
+    }
     return;
 };
 

@@ -1,5 +1,6 @@
 import { isMinimalIssue, MinimalIssue, MinimalIssueOrKeyAndSite } from '@atlassianlabs/jira-pi-common-models';
 import { commands, env, ExtensionContext, Uri } from 'vscode';
+
 import {
     cloneRepositoryButtonEvent,
     openWorkbenchRepositoryButtonEvent,
@@ -21,16 +22,17 @@ import { HelpTreeViewId } from './constants';
 import { Container } from './container';
 import { knownLinkIdMap } from './lib/ipc/models/common';
 import { ConfigSection, ConfigSubSection } from './lib/ipc/models/config';
+import { toggleDiffNormalize } from './normalize';
 import { AbstractBaseNode } from './views/nodes/abstractBaseNode';
 import { IssueNode } from './views/nodes/issueNode';
 import { PipelineNode } from './views/pipelines/PipelinesTree';
-import { toggleDiffNormalize } from './normalize';
 
 export enum Commands {
     BitbucketSelectContainer = 'atlascode.bb.selectContainer',
     BitbucketFetchPullRequests = 'atlascode.bb.fetchPullRequests',
     BitbucketRefreshPullRequests = 'atlascode.bb.refreshPullRequests',
     BitbucketToggleFileNesting = 'atlascode.bb.toggleFileNesting',
+    BitbucketOpenPullRequest = 'atlascode.bb.openPullRequest',
     BitbucketShowOpenPullRequests = 'atlascode.bb.showOpenPullRequests',
     BitbucketShowPullRequestsToReview = 'atlascode.bb.showPullRequestsToReview',
     BitbucketShowPullRequestsCreatedByMe = 'atlascode.bb.showOpenPullRequestsCreatedByMe',
@@ -55,7 +57,9 @@ export enum Commands {
     BitbucketToggleDiffNormalize = 'atlascode.bb.togglediffNormalize',
     EditThisFile = 'atlascode.bb.editThisFile',
     CreateIssue = 'atlascode.jira.createIssue',
-    RefreshJiraExplorer = 'atlascode.jira.refreshExplorer',
+    RefreshAssignedWorkItemsExplorer = 'atlascode.jira.refreshAssignedWorkItemsExplorer',
+    RefreshCustomJqlExplorer = 'atlascode.jira.refreshCustomJqlExplorer',
+    AddJiraSite = 'atlascode.jira.addJiraSite',
     ShowJiraIssueSettings = 'atlascode.jira.showJiraIssueSettings',
     ShowPullRequestSettings = 'atlascode.bb.showPullRequestSettings',
     ShowPipelineSettings = 'atlascode.bb.showPipelineSettings',
@@ -94,10 +98,26 @@ export enum Commands {
     WorkbenchOpenWorkspace = 'atlascode.workbenchOpenWorkspace',
     CloneRepository = 'atlascode.cloneRepository',
     DisableHelpExplorer = 'atlascode.disableHelpExplorer',
+    CreateNewJql = 'atlascode.jira.createNewJql',
+    ToDoIssue = 'atlascode.jira.todoIssue',
+    InProgressIssue = 'atlascode.jira.inProgressIssue',
+    DoneIssue = 'atlascode.jira.doneIssue',
 }
 
 export function registerCommands(vscodeContext: ExtensionContext) {
     vscodeContext.subscriptions.push(
+        commands.registerCommand(Commands.AddJiraSite, () =>
+            Container.settingsWebviewFactory.createOrShow({
+                section: ConfigSection.Jira,
+                subSection: ConfigSubSection.Auth,
+            }),
+        ),
+        commands.registerCommand(Commands.CreateNewJql, () =>
+            Container.settingsWebviewFactory.createOrShow({
+                section: ConfigSection.Jira,
+                subSection: ConfigSubSection.Issues,
+            }),
+        ),
         commands.registerCommand(Commands.ShowConfigPage, () =>
             Container.settingsWebviewFactory.createOrShow({
                 section: ConfigSection.Jira,
@@ -183,6 +203,15 @@ export function registerCommands(vscodeContext: ExtensionContext) {
             Commands.ShowIssueForSiteIdAndKey,
             async (siteId: string, issueKey: string) => await showIssueForSiteIdAndKey(siteId, issueKey),
         ),
+        commands.registerCommand(Commands.ToDoIssue, (issueNode) =>
+            commands.executeCommand(Commands.ShowIssue, issueNode.issue),
+        ),
+        commands.registerCommand(Commands.InProgressIssue, (issueNode) =>
+            commands.executeCommand(Commands.ShowIssue, issueNode.issue),
+        ),
+        commands.registerCommand(Commands.DoneIssue, (issueNode) =>
+            commands.executeCommand(Commands.ShowIssue, issueNode.issue),
+        ),
         commands.registerCommand(Commands.AssignIssueToMe, (issueNode: IssueNode) => assignIssue(issueNode)),
         commands.registerCommand(
             Commands.StartWorkOnIssue,
@@ -229,6 +258,9 @@ export function registerCommands(vscodeContext: ExtensionContext) {
         }),
         commands.registerCommand(Commands.DisableHelpExplorer, () => {
             configuration.updateEffective('helpExplorerEnabled', false, null, true);
+        }),
+        commands.registerCommand(Commands.BitbucketOpenPullRequest, (data: { pullRequestUrl: string }) => {
+            Container.openPullRequestHandler(data.pullRequestUrl);
         }),
     );
 }

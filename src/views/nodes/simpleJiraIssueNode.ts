@@ -1,5 +1,6 @@
 import { createEmptyMinimalIssue } from '@atlassianlabs/jira-pi-common-models';
 import { Command, TreeItem, TreeItemCollapsibleState } from 'vscode';
+
 import { emptySiteInfo } from '../../atlclients/authInfo';
 import { AbstractBaseNode } from './abstractBaseNode';
 import { IssueNode } from './issueNode';
@@ -17,7 +18,7 @@ export class SimpleJiraIssueNode extends IssueNode {
     }
 
     getTreeItem(): TreeItem {
-        let treeItem = new TreeItem(this.text, TreeItemCollapsibleState.None);
+        const treeItem = new TreeItem(this.text, TreeItemCollapsibleState.None);
         treeItem.tooltip = this.text;
 
         if (this.command) {

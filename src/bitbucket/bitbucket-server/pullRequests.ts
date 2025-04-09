@@ -1,4 +1,5 @@
 import { CancelToken } from 'axios';
+
 import { DetailedSiteInfo } from '../../atlclients/authInfo';
 import { configuration } from '../../config/configuration';
 import { Container } from '../../container';
@@ -81,7 +82,7 @@ export class ServerPullRequestApi implements PullRequestApi {
     }
 
     async getListToReview(workspaceRepo: WorkspaceRepo): Promise<PaginatedPullRequests> {
-        let query = {
+        const query: Record<string, any> = {
             'username.1': await this.userName(workspaceRepo),
             'role.1': 'REVIEWER',
         };
@@ -397,7 +398,7 @@ export class ServerPullRequestApi implements PullRequestApi {
             return [];
         }
 
-        let accumulatedDiffStats = data.diffs as any[];
+        const accumulatedDiffStats = data.diffs as any[];
         while (data.isLastPage === false) {
             const nextPage = await this.client.get(
                 this.client.generateUrl(
@@ -487,6 +488,16 @@ export class ServerPullRequestApi implements PullRequestApi {
 
         return result;
     }
+    /**
+     *
+     * @param pr The Pull request for which conflict data is to be calculated
+     * @returns [''] -> Empty String Array
+     * We don't seem to have the concept of conflicted Files in Server from the getChangedFiles method above
+     * but this has been implemented here because Server extends the common interface PullRequestApi which has this method
+     */
+    async getConflictedFiles(pr: PullRequest): Promise<string[]> {
+        return [];
+    }
 
     async getCurrentUser(site: DetailedSiteInfo): Promise<User> {
         const userSlug = site.userId;
@@ -546,7 +557,7 @@ export class ServerPullRequestApi implements PullRequestApi {
         The Bitbucket Server API can not delete a comment unless the comment's version is provided as a query parameter.
         In order to get the comment's version, a call must be made to the Bitbucket Server API.
         */
-        let { data } = await this.client.get(
+        const { data } = await this.client.get(
             `/rest/api/1.0/projects/${ownerSlug}/repos/${repoSlug}/pull-requests/${prId}/comments/${commentId}`,
         );
 
@@ -639,7 +650,7 @@ export class ServerPullRequestApi implements PullRequestApi {
                         } else {
                             return 1;
                         }
-                    } catch (e) {
+                    } catch {
                         return a.ts!! ? 1 : -1;
                     }
                 }),
@@ -649,8 +660,8 @@ export class ServerPullRequestApi implements PullRequestApi {
 
     private shouldDisplayComment(comment: Comment): boolean {
         let hasUndeletedChild: boolean = false;
-        let filteredChildren = [];
-        for (let child of comment.children) {
+        const filteredChildren = [];
+        for (const child of comment.children) {
             if (this.shouldDisplayComment(child)) {
                 filteredChildren.push(child);
                 hasUndeletedChild = true;
@@ -662,7 +673,7 @@ export class ServerPullRequestApi implements PullRequestApi {
     }
 
     private async toNestedCommentModel(site: BitbucketSite, comment: any, commentAnchor: any): Promise<Comment> {
-        let commentModel: Comment = await this.convertDataToComment(site, comment, commentAnchor);
+        const commentModel: Comment = await this.convertDataToComment(site, comment, commentAnchor);
         commentModel.children = await Promise.all(
             (comment.comments || []).map((c: any) => this.toNestedCommentModel(site, c, commentAnchor)),
         );
@@ -706,6 +717,7 @@ export class ServerPullRequestApi implements PullRequestApi {
             state: val.state,
             url: val.url,
             ts: val.dateAdded,
+            key: val.key,
         }));
     }
 
@@ -739,7 +751,7 @@ export class ServerPullRequestApi implements PullRequestApi {
         const bbApi = await clientForSite(site);
         const repo = await bbApi.repositories.get(site);
 
-        let { data } = await this.client.get(
+        const { data } = await this.client.get(
             `/rest/default-reviewers/1.0/projects/${ownerSlug}/repos/${repoSlug}/reviewers`,
             {
                 markup: true,
@@ -802,7 +814,7 @@ export class ServerPullRequestApi implements PullRequestApi {
     async update(pr: PullRequest, title: string, summary: string, reviewerAccountIds: string[]): Promise<PullRequest> {
         const { ownerSlug, repoSlug } = pr.site;
 
-        let prBody = {
+        const prBody = {
             version: pr.data.version,
             title: title,
             description: summary,
@@ -830,13 +842,25 @@ export class ServerPullRequestApi implements PullRequestApi {
 
         const userSlug = pr.site.details.userId;
 
+        // The API uses different status values than the model
+        // CHANGES_REQUESTED -> NEEDS_WORK
         const { data } = await this.client.put(
             `/rest/api/1.0/projects/${ownerSlug}/repos/${repoSlug}/pull-requests/${pr.data.id}/participants/${userSlug}`,
             {
-                status: status,
+                status:
+                    status === 'CHANGES_REQUESTED'
+                        ? 'NEEDS_WORK'
+                        : status === 'NO_CHANGES_REQUESTED'
+                          ? 'UNAPPROVED'
+                          : status,
             },
         );
 
+        // The API returns the new status of the user,So this api call will return NEEDS_WORK
+        // which is the status stored as CHANGES_REQUESTED in the model
+        if (data.status === 'NEEDS_WORK') {
+            return 'CHANGES_REQUESTED';
+        }
         return data.status;
     }
 
@@ -982,7 +1006,7 @@ export class ServerPullRequestApi implements PullRequestApi {
                 participants: data.reviewers.map((reviewer: any) => ({
                     ...this.toUser(site.details, reviewer.user),
                     role: reviewer.role,
-                    status: reviewer.status,
+                    status: reviewer.status === 'NEEDS_WORK' ? 'CHANGES_REQUESTED' : reviewer.status,
                 })),
                 source: source,
                 destination: destination,

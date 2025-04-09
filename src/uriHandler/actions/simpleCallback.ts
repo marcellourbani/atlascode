@@ -1,4 +1,5 @@
 import { Uri } from 'vscode';
+
 import { UriHandlerAction } from '../uriHandlerAction';
 
 /**
@@ -13,7 +14,7 @@ import { UriHandlerAction } from '../uriHandlerAction';
 export class SimpleCallbackAction implements UriHandlerAction {
     constructor(
         private uriSuffix: string,
-        private callback: () => Promise<void>,
+        private callback: (uri: Uri) => Promise<void>,
     ) {}
 
     isAccepted(uri: Uri): boolean {
@@ -21,6 +22,6 @@ export class SimpleCallbackAction implements UriHandlerAction {
     }
 
     async handle(uri: Uri): Promise<void> {
-        return await this.callback();
+        return await this.callback(uri);
     }
 }

@@ -1,18 +1,22 @@
-'use strict';
-
+import { pid } from 'process';
 import * as semver from 'semver';
 import { commands, env, ExtensionContext, extensions, languages, Memento, window } from 'vscode';
+
 import { installedEvent, launchedEvent, upgradedEvent } from './analytics';
 import { DetailedSiteInfo, ProductBitbucket, ProductJira } from './atlclients/authInfo';
+import { startListening } from './atlclients/negotiate';
 import { BitbucketContext } from './bitbucket/bbContext';
 import { activate as activateCodebucket } from './codebucket/command/registerCommands';
-import { Commands, registerCommands } from './commands';
-import { configuration, Configuration, IConfig } from './config/configuration';
-import { GlobalStateVersionKey } from './constants';
 import { CommandContext, setCommandContext } from './commandContext';
+import { Commands, registerCommands } from './commands';
+import { Configuration, configuration, IConfig } from './config/configuration';
+import { GlobalStateVersionKey } from './constants';
 import { Container } from './container';
+import { registerAnalyticsClient, registerErrorReporting, unregisterErrorReporting } from './errorReporting';
+import { JQLManager } from './jira/jqlManager';
 import { provideCodeLenses } from './jira/todoObserver';
 import { Logger } from './logger';
+import { api } from './normalize';
 import { PipelinesYamlCompletionProvider } from './pipelines/yaml/pipelinesYamlCompletionProvider';
 import {
     activateYamlExtension,
@@ -21,14 +25,15 @@ import {
 } from './pipelines/yaml/pipelinesYamlHelper';
 import { registerResources } from './resources';
 import { GitExtension } from './typings/git';
-import { pid } from 'process';
-import { startListening } from './atlclients/negotiate';
-import { api } from './normalize';
+import { FeatureFlagClient } from './util/featureFlags';
 
 const AnalyticDelay = 5000;
 
 export async function activate(context: ExtensionContext) {
     const start = process.hrtime();
+
+    registerErrorReporting();
+
     const atlascode = extensions.getExtension('atlassian.atlascode')!;
     const atlascodeVersion = atlascode.packageJSON.version;
     const previousVersion = context.globalState.get<string>(GlobalStateVersionKey);
@@ -44,6 +49,7 @@ export async function activate(context: ExtensionContext) {
     try {
         Container.initialize(context, configuration.get<IConfig>(), atlascodeVersion);
 
+        registerAnalyticsClient(Container.analyticsClient);
         registerCommands(context);
         activateCodebucket(context);
 
@@ -55,6 +61,8 @@ export async function activate(context: ExtensionContext) {
             CommandContext.IsBBAuthenticated,
             Container.siteManager.productHasAtLeastOneSite(ProductBitbucket),
         );
+
+        await JQLManager.backFillOldDetailedSiteInfos();
     } catch (e) {
         Logger.error(e, 'Error initializing atlascode!');
     }
@@ -63,11 +71,13 @@ export async function activate(context: ExtensionContext) {
         Container.clientManager.requestSite(site);
     });
 
-    if (previousVersion === undefined && window.state.focused) {
-        commands.executeCommand(Commands.ShowOnboardingPage); //This is shown to users who have never opened our extension before
+    // new user for auth exp
+    if (previousVersion === undefined) {
+        showOnboardingPage();
     } else {
         showWelcomePage(atlascodeVersion, previousVersion);
     }
+
     const delay = Math.floor(Math.random() * Math.floor(AnalyticDelay));
     setTimeout(() => {
         sendAnalytics(atlascodeVersion, context.globalState);
@@ -166,5 +176,12 @@ async function sendAnalytics(version: string, globalState: Memento) {
     });
 }
 
+function showOnboardingPage() {
+    commands.executeCommand(Commands.ShowOnboardingPage);
+}
+
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+    unregisterErrorReporting();
+    FeatureFlagClient.dispose();
+}

@@ -11,6 +11,7 @@ import {
     Typography,
 } from '@material-ui/core';
 import React, { memo, useCallback, useState } from 'react';
+
 import {
     AuthInfo,
     AuthInfoState,
@@ -25,9 +26,9 @@ import {
 import { emptySiteWithAuthInfo, SiteWithAuthInfo } from '../../../../../lib/ipc/toUI/config';
 import { useFormValidation } from '../../../common/form/useFormValidation';
 import { validateRequiredString, validateStartsWithProtocol } from '../../../util/fieldValidators';
-import { emptyAuthFormState, FormFields } from './types';
-import { JiraBasicAuthForm } from './JiraApiTokenAuthForm';
 import { CustomSiteAuthForm } from './CustomSiteAuthForm';
+import { JiraBasicAuthForm } from './JiraApiTokenAuthForm';
+import { emptyAuthFormState, FormFields } from './types';
 
 export type AuthDialogProps = {
     open: boolean;
@@ -196,7 +197,12 @@ export const AuthDialog: React.FunctionComponent<AuthDialogProps> = memo(
                     </Grid>
                 </DialogContent>
                 <DialogActions>
-                    <Button disabled={!isValid} onClick={handleSubmit(handleSave)} variant="contained" color="primary">
+                    <Button
+                        disabled={!isValid && authFormType !== AuthFormType.None}
+                        onClick={handleSubmit(handleSave)}
+                        variant="contained"
+                        color="primary"
+                    >
                         Save Site
                     </Button>
                     <Button onClick={doClose} color="primary">
@@ -237,12 +243,12 @@ function isCustomUrl(url: string): boolean {
     try {
         const urlObj = new URL(url);
         return cloudHostnames.every((host) => !urlObj.hostname.endsWith(host));
-    } catch (e) {
+    } catch {
         return false;
     }
 }
 
-export const normalizeContextPath = (cPath: string): string | undefined => {
+const normalizeContextPath = (cPath: string): string | undefined => {
     if (!cPath || cPath.trim() === '' || cPath.trim() === '/') {
         return undefined;
     }
