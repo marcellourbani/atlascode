@@ -30,17 +30,18 @@ import RemoveRedEyeOutlinedIcon from '@material-ui/icons/RemoveRedEyeOutlined';
 import StarBorder from '@material-ui/icons/StarBorder';
 import { format, parseISO } from 'date-fns';
 import React, { useCallback } from 'react';
+import { AnalyticsView } from 'src/analyticsTypes';
+
 import CommentForm from '../common/CommentForm';
 import { CopyLinkButton } from '../common/CopyLinkButton';
+import { AtlascodeErrorBoundary } from '../common/ErrorBoundary';
 import { ErrorDisplay } from '../common/ErrorDisplay';
 import { PMFDisplay } from '../common/pmf/PMFDisplay';
 import { BitbucketIssueControllerContext, useBitbucketIssueController } from './bitbucketIssueController';
 import StatusMenu from './StatusMenu';
 import UserPicker from './UserPicker';
-import { AtlascodeErrorBoundary } from '../common/ErrorBoundary';
-import { AnalyticsView } from 'src/analyticsTypes';
 
-const priorityIcon = {
+const priorityIcon: Record<string, JSX.Element> = {
     trivial: <RadioButtonUncheckedIcon />,
     minor: <ArrowDownwardIcon />,
     major: <KeyboardArrowUpIcon />,
@@ -48,7 +49,7 @@ const priorityIcon = {
     blocker: <BlockIcon />,
 };
 
-const typeIcon = {
+const typeIcon: Record<string, JSX.Element> = {
     bug: <BugReportIcon />,
     enhancement: <ArrowUpwardIcon />,
     proposal: <EmojiObjectsIcon />,

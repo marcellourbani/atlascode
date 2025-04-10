@@ -34,23 +34,24 @@ import SettingsIcon from '@material-ui/icons/Settings';
 import { Alert, AlertTitle, Autocomplete } from '@material-ui/lab';
 import Mustache from 'mustache';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { AnalyticsView } from 'src/analyticsTypes';
+import uuid from 'uuid';
+
+import { StartWorkAction, StartWorkActionType } from '../../../lib/ipc/fromUI/startWork';
 import { ConfigSection, ConfigSubSection } from '../../../lib/ipc/models/config';
 import { BranchType, emptyRepoData, RepoData } from '../../../lib/ipc/toUI/startWork';
 import { Branch } from '../../../typings/git';
+import { OnMessageEventPromise } from '../../../util/reactpromise';
+import { ConnectionTimeout } from '../../../util/time';
+import { RenderedContent } from '../../../webviews/components/RenderedContent';
 import { colorToLozengeAppearanceMap } from '../../vscode/theme/colors';
 import { VSCodeStyles, VSCodeStylesContext } from '../../vscode/theme/styles';
+import { AtlascodeErrorBoundary } from '../common/ErrorBoundary';
 import { ErrorDisplay } from '../common/ErrorDisplay';
 import Lozenge from '../common/Lozenge';
 import { PMFDisplay } from '../common/pmf/PMFDisplay';
 import { PrepareCommitTip } from '../common/PrepareCommitTip';
 import { StartWorkControllerContext, useStartWorkController } from './startWorkController';
-import { AtlascodeErrorBoundary } from '../common/ErrorBoundary';
-import { AnalyticsView } from 'src/analyticsTypes';
-import { RenderedContent } from '../../../webviews/components/RenderedContent';
-import { StartWorkAction, StartWorkActionType } from '../../../lib/ipc/fromUI/startWork';
-import { OnMessageEventPromise } from '../../../util/reactpromise';
-import { ConnectionTimeout } from '../../../util/time';
-import uuid from 'uuid';
 
 const useStyles = makeStyles((theme: Theme) => ({
     title: {
@@ -95,6 +96,7 @@ const StartWorkPage: React.FunctionComponent = () => {
 
     const [transitionIssueEnabled, setTransitionIssueEnabled] = useState(true);
     const [branchSetupEnabled, setbranchSetupEnabled] = useState(true);
+    const [pushBranchEnabled, setPushBranchEnabled] = useState(true);
     const [transition, setTransition] = useState<Transition>(emptyTransition);
     const [repository, setRepository] = useState<RepoData>(emptyRepoData);
     const [branchType, setBranchType] = useState<BranchType>(emptyPrefix);
@@ -119,6 +121,8 @@ const StartWorkPage: React.FunctionComponent = () => {
         () => setbranchSetupEnabled(!branchSetupEnabled),
         [branchSetupEnabled],
     );
+
+    const togglePushBranchEnabled = useCallback(() => setPushBranchEnabled(!pushBranchEnabled), [pushBranchEnabled]);
 
     const handleTransitionChange = useCallback(
         (event: React.ChangeEvent<{ name?: string | undefined; value: any }>) => {
@@ -181,6 +185,8 @@ const StartWorkPage: React.FunctionComponent = () => {
 
     const handleLocalBranchChange = useCallback(
         (event: React.ChangeEvent<{ name?: string | undefined; value: string }>) => {
+            // spaces are not allowed in branch names
+            event.target.value = event.target.value.replace(/ /g, '-');
             setLocalBranch(event.target.value);
         },
         [setLocalBranch],
@@ -246,11 +252,12 @@ const StartWorkPage: React.FunctionComponent = () => {
                 sourceBranch,
                 localBranch,
                 upstream,
+                pushBranchEnabled,
             );
             setSubmitState('submit-success');
             setSubmitResponse(response);
             setSuccessSnackbarOpen(true);
-        } catch (e) {
+        } catch {
             setSubmitState('initial');
         }
     }, [
@@ -262,6 +269,7 @@ const StartWorkPage: React.FunctionComponent = () => {
         sourceBranch,
         localBranch,
         upstream,
+        pushBranchEnabled,
     ]);
 
     const handleOpenSettings = useCallback(() => {
@@ -696,6 +704,28 @@ const StartWorkPage: React.FunctionComponent = () => {
                                                                         />
                                                                     </Grid>
                                                                 </Grid>
+                                                            </Grid>
+                                                        </Grid>
+                                                    </Grid>
+                                                    <Grid item>
+                                                        <Divider />
+                                                    </Grid>
+                                                    <Grid item>
+                                                        <Grid container spacing={1} direction="row">
+                                                            <Grid item>
+                                                                <Switch
+                                                                    color="primary"
+                                                                    size="small"
+                                                                    checked={pushBranchEnabled}
+                                                                    onClick={togglePushBranchEnabled}
+                                                                />
+                                                            </Grid>
+                                                            <Grid item>
+                                                                <Typography variant="h4">
+                                                                    <Box fontWeight="fontWeightBold">
+                                                                        Push the new branch to remote
+                                                                    </Box>
+                                                                </Typography>
                                                             </Grid>
                                                         </Grid>
                                                     </Grid>

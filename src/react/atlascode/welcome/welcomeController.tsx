@@ -1,5 +1,6 @@
 import { ReducerAction } from '@atlassianlabs/guipi-core-controller';
 import React, { useCallback, useMemo, useReducer } from 'react';
+
 import { CommonActionType } from '../../../lib/ipc/fromUI/common';
 import { WelcomeAction, WelcomeActionType } from '../../../lib/ipc/fromUI/welcome';
 import { KnownLinkID, WebViewID } from '../../../lib/ipc/models/common';
@@ -17,7 +18,7 @@ export interface WelcomeControllerApi {
     openLink: (linkId: KnownLinkID) => void;
 }
 
-export const emptyApi: WelcomeControllerApi = {
+const emptyApi: WelcomeControllerApi = {
     postMessage: () => {},
     openSettings: () => {},
     openLink: () => {},
@@ -26,15 +27,15 @@ export const emptyApi: WelcomeControllerApi = {
 export const WelcomeControllerContext = React.createContext(emptyApi);
 
 export interface WelcomeState extends WelcomeInitMessage {}
-export const emptyState = {
+const emptyState = {
     ...emptyWelcomeInitMessage,
 };
 
-export enum WelcomeUIActionType {
+enum WelcomeUIActionType {
     Init = 'init',
 }
 
-export type WelcomeUIAction = ReducerAction<WelcomeUIActionType.Init, { data: WelcomeInitMessage }>;
+type WelcomeUIAction = ReducerAction<WelcomeUIActionType.Init, { data: WelcomeInitMessage }>;
 
 function welcomeReducer(state: WelcomeState, action: WelcomeUIAction): WelcomeState {
     switch (action.type) {

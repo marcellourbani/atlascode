@@ -1,14 +1,15 @@
 import * as vscode from 'vscode';
-import { AbstractBaseNode } from './abstractBaseNode';
-import { StaticIssuesNode } from '../jira/staticIssuesNode';
-import { IssueNode } from './issueNode';
-import { PullRequest, Comment, Commit } from '../../bitbucket/model';
-import { Container } from '../../container';
-import { extractIssueKeys } from '../../bitbucket/issueKeysExtractor';
+
 import { ProductJira } from '../../atlclients/authInfo';
+import { extractIssueKeys } from '../../bitbucket/issueKeysExtractor';
+import { Comment, Commit, PullRequest } from '../../bitbucket/model';
+import { Container } from '../../container';
+import { StaticIssuesNode } from '../jira/staticIssuesNode';
+import { AbstractBaseNode } from './abstractBaseNode';
+import { IssueNode } from './issueNode';
 
 export class RelatedIssuesNode extends AbstractBaseNode {
-    private _delegate: StaticIssuesNode;
+    private _delegate: StaticIssuesNode | undefined;
 
     private constructor() {
         super();
@@ -26,6 +27,8 @@ export class RelatedIssuesNode extends AbstractBaseNode {
         ) {
             return undefined;
         }
+
+        // [mmura] TODO is this broken now? or at least it should migrate to a simpler logic
         const issueKeys = await extractIssueKeys(pr, commits, allComments);
         if (issueKeys.length > 0) {
             const node = new RelatedIssuesNode();
@@ -37,10 +40,10 @@ export class RelatedIssuesNode extends AbstractBaseNode {
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {
-        return this._delegate.getTreeItem();
+        return this._delegate!.getTreeItem();
     }
 
     getChildren(element?: IssueNode): Promise<IssueNode[]> {
-        return this._delegate.getChildren(element);
+        return this._delegate!.getChildren(element);
     }
 }
