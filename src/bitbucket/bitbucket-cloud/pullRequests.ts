@@ -7,6 +7,7 @@ import { Logger } from '../../logger';
 import { CacheMap } from '../../util/cachemap';
 import { Time } from '../../util/time';
 import { getFileNameFromPaths } from '../../views/pullrequest/diffViewHelper';
+import { encodePathParts } from '../bbUtils';
 import { HTTPClient } from '../httpClient';
 import {
     ApprovalStatus,
@@ -28,7 +29,6 @@ import {
     WorkspaceRepo,
 } from '../model';
 import { CloudRepositoriesApi } from './repositories';
-import { encodePathParts } from '../bbUtils';
 
 export const maxItemsSupported = {
     commits: 100,
