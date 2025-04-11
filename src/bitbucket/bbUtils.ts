@@ -152,5 +152,5 @@ export function workspaceRepoFor(repository: Repository): WorkspaceRepo {
 }
 
 export function encodePathParts(path: string) {
-    return path.split('/').map(encodeURIComponent).join('/');
+    return path?.split('/').map(encodeURIComponent).join('/');
 }
