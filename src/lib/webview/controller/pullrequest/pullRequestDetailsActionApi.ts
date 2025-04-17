@@ -1,8 +1,8 @@
 import { MinimalIssue } from '@atlassianlabs/jira-pi-common-models';
+
 import { DetailedSiteInfo } from '../../../../atlclients/authInfo';
 import {
     ApprovalStatus,
-    BitbucketIssue,
     BitbucketSite,
     BuildStatus,
     Comment,
@@ -31,6 +31,7 @@ export interface PullRequestDetailsActionApi {
     editComment(comments: Comment[], pr: PullRequest, content: string, commentId: string): Promise<Comment[]>;
     deleteComment(pr: PullRequest, comment: Comment): Promise<Comment[]>;
     getFileDiffs(pr: PullRequest, inlineComments: Comment[]): Promise<FileDiff[]>;
+    getConflictedFiles(pr: PullRequest): Promise<string[]>;
     openDiffViewForFile(pr: PullRequest, fileDiff: FileDiff, comments: Comment[]): Promise<void>;
     updateBuildStatuses(pr: PullRequest): Promise<BuildStatus[]>;
     updateMergeStrategies(pr: PullRequest): Promise<MergeStrategy[]>;
@@ -39,16 +40,14 @@ export interface PullRequestDetailsActionApi {
         commits: Commit[],
         comments: Comment[],
     ): Promise<MinimalIssue<DetailedSiteInfo>[]>;
-    fetchRelatedBitbucketIssues(pr: PullRequest, commits: Commit[], comments: Comment[]): Promise<BitbucketIssue[]>;
     merge(
         pr: PullRequest,
         mergeStrategy: MergeStrategy,
         commitMessage: string,
         closeSourceBranch: boolean,
-        issues: (MinimalIssue<DetailedSiteInfo> | BitbucketIssue)[],
+        issues: MinimalIssue<DetailedSiteInfo>[],
     ): Promise<PullRequest>;
     openJiraIssue(issue: MinimalIssue<DetailedSiteInfo>): Promise<void>;
-    openBitbucketIssue(issue: BitbucketIssue): Promise<void>;
 
     openBuildStatus(pr: PullRequest, status: BuildStatus): Promise<void>;
     getTasks(

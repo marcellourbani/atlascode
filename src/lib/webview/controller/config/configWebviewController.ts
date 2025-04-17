@@ -1,35 +1,37 @@
-import { CommonMessage, CommonMessageType } from '../../../ipc/toUI/common';
-import { ConfigAction, ConfigActionType } from '../../../ipc/fromUI/config';
-import { ConfigMessage, ConfigMessageType, ConfigResponse, SectionChangeMessage } from '../../../ipc/toUI/config';
-import { MessagePoster, WebviewController } from '../webviewController';
-import { isBasicAuthInfo, isEmptySiteInfo, isPATAuthInfo } from '../../../../atlclients/authInfo';
-
-import { AnalyticsApi } from '../../../analyticsApi';
-import Axios from 'axios';
-import { CommonActionMessageHandler } from '../common/commonActionMessageHandler';
-import { CommonActionType } from '../../../ipc/fromUI/common';
-import { ConfigActionApi } from './configActionApi';
-import { Logger } from '../../../logger';
-import { WebViewID } from '../../../ipc/models/common';
 import { defaultActionGuard } from '@atlassianlabs/guipi-core-controller';
-import { formatError } from '../../formatError';
+import Axios from 'axios';
 import uuid from 'uuid';
-
 // TODO AXON-46 - figure out why linter is mad here
 // This is most likely a configuration error, since it makes sense to prevent imports of
 // `vscode` and `container` in react files - but this is NOT a react file :thinking:
 import vscode from 'vscode'; // eslint-disable-line
+
+import { isBasicAuthInfo, isEmptySiteInfo, isPATAuthInfo } from '../../../../atlclients/authInfo';
 import { Container } from '../../../../container'; //eslint-disable-line
+import { AnalyticsApi } from '../../../analyticsApi';
+import { CommonActionType } from '../../../ipc/fromUI/common';
+import { ConfigAction, ConfigActionType } from '../../../ipc/fromUI/config';
+import { WebViewID } from '../../../ipc/models/common';
+import { CommonMessage, CommonMessageType } from '../../../ipc/toUI/common';
+import { ConfigMessage, ConfigMessageType, ConfigResponse, SectionChangeMessage } from '../../../ipc/toUI/config';
+import { Logger } from '../../../logger';
+import { formatError } from '../../formatError';
+import { CommonActionMessageHandler } from '../common/commonActionMessageHandler';
+import { MessagePoster, WebviewController } from '../webviewController';
+import { ConfigActionApi } from './configActionApi';
 
 export const id: string = 'atlascodeSettingsV2';
 
 export class ConfigWebviewController implements WebviewController<SectionChangeMessage> {
+    public readonly requiredFeatureFlags = [];
+    public readonly requiredExperiments = [];
+
     private _messagePoster: MessagePoster;
     private _api: ConfigActionApi;
     private _logger: Logger;
     private _analytics: AnalyticsApi;
     private _commonHandler: CommonActionMessageHandler;
-    private _isRefreshing: boolean;
+    private _isRefreshing = false;
     private _settingsUrl: string;
     private _initialSection?: SectionChangeMessage;
 
@@ -50,6 +52,8 @@ export class ConfigWebviewController implements WebviewController<SectionChangeM
         this._commonHandler = commonHandler;
         this._initialSection = section;
     }
+
+    public onShown(): void {}
 
     public title(): string {
         return 'Atlassian Settings';

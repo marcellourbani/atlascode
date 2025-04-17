@@ -1,6 +1,5 @@
-import { AccessibleResource, DetailedSiteInfo, OAuthProvider, ProductJira } from './authInfo';
-
 import { Authenticator } from './authenticator';
+import { AccessibleResource, DetailedSiteInfo, OAuthProvider, ProductJira } from './authInfo';
 import { CredentialManager } from './authStore';
 
 export class JiraAuthentictor implements Authenticator {
@@ -30,6 +29,7 @@ export class JiraAuthentictor implements Authenticator {
                 isCloud: true,
                 userId: userId,
                 credentialId: credentialId,
+                hasResolutionField: false, // this field is populated in loginManager.ts
             };
         });
 

@@ -1,11 +1,11 @@
 import { defaultActionGuard, defaultStateGuard, ReducerAction } from '@atlassianlabs/guipi-core-controller';
 import React, { useCallback, useMemo, useReducer } from 'react';
+
 import { AuthInfo, DetailedSiteInfo, SiteInfo } from '../../../atlclients/authInfo';
 import { CommonActionType } from '../../../lib/ipc/fromUI/common';
 import { OnboardingAction, OnboardingActionType } from '../../../lib/ipc/fromUI/onboarding';
 import { KnownLinkID, WebViewID } from '../../../lib/ipc/models/common';
 import { ConfigSection, ConfigSubSection, ConfigTarget, FlattenedConfig } from '../../../lib/ipc/models/config';
-import { SiteWithAuthInfo } from '../../../lib/ipc/toUI/config';
 import {
     emptyOnboardingInitMessage,
     OnboardingInitMessage,
@@ -32,7 +32,7 @@ export interface OnboardingControllerApi {
     isLoginComplete: boolean;
 }
 
-export const emptyApi: OnboardingControllerApi = {
+const emptyApi: OnboardingControllerApi = {
     postMessage: (s) => {
         return;
     },
@@ -86,7 +86,7 @@ const emptyState: OnboardingState = {
     isSomethingLoading: false,
 };
 
-export enum OnboardingUIActionType {
+enum OnboardingUIActionType {
     Init = 'init',
     ConfigChange = 'configChange',
     Loading = 'loading',
@@ -94,14 +94,14 @@ export enum OnboardingUIActionType {
     LocalChange = 'localChange',
 }
 
-export type OnboardingUIAction =
+type OnboardingUIAction =
     | ReducerAction<OnboardingUIActionType.Init, { data: OnboardingInitMessage }>
     | ReducerAction<OnboardingUIActionType.ConfigChange, { config: FlattenedConfig; target: ConfigTarget }>
     | ReducerAction<OnboardingUIActionType.LocalChange, { changes: { [key: string]: any } }>
     | ReducerAction<OnboardingUIActionType.Loading>
     | ReducerAction<
           OnboardingUIActionType.SitesUpdate,
-          { jiraSites: SiteWithAuthInfo[]; bitbucketSites: SiteWithAuthInfo[] }
+          { jiraSitesConfigured: boolean; bitbucketSitesConfigured: boolean }
       >;
 
 export type ConfigChanges = { [key: string]: any };
@@ -137,8 +137,8 @@ function onboardingReducer(state: OnboardingState, action: OnboardingUIAction): 
             return {
                 ...state,
                 ...{
-                    jiraSites: action.jiraSites,
-                    bitbucketSites: action.bitbucketSites,
+                    jiraSitesConfigured: action.jiraSitesConfigured,
+                    bitbucketSitesConfigured: action.bitbucketSitesConfigured,
                     isSomethingLoading: false,
                     isErrorBannerOpen: false,
                     errorDetails: undefined,
@@ -172,8 +172,8 @@ export function useOnboardingController(): [OnboardingState, OnboardingControlle
             case OnboardingMessageType.SitesUpdate: {
                 dispatch({
                     type: OnboardingUIActionType.SitesUpdate,
-                    jiraSites: message.jiraSites,
-                    bitbucketSites: message.bitbucketSites,
+                    jiraSitesConfigured: message.jiraSitesConfigured,
+                    bitbucketSitesConfigured: message.bitbucketSitesConfigured,
                 });
                 break;
             }

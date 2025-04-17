@@ -1,12 +1,7 @@
 import {
     authenticateButtonEvent,
     authenticatedEvent,
-    bbIssueCommentEvent,
-    bbIssueCreatedEvent,
     bbIssuesPaginationEvent,
-    bbIssueTransitionedEvent,
-    bbIssueUrlCopiedEvent,
-    bbIssueWorkStartedEvent,
     customJQLCreatedEvent,
     deepLinkEvent,
     doneButtonEvent,
@@ -49,9 +44,9 @@ import {
     viewScreenEvent,
 } from './analytics';
 import { AnalyticsClient } from './analytics-node-client/src/client.min.js';
+import { UIErrorInfo } from './analyticsTypes';
 import { DetailedSiteInfo, Product, SiteInfo } from './atlclients/authInfo';
 import { AnalyticsApi } from './lib/analyticsApi';
-import { UIErrorInfo } from './analyticsTypes';
 
 export class VSCAnalyticsApi implements AnalyticsApi {
     private _analyticsClient: AnalyticsClient;
@@ -143,36 +138,6 @@ export class VSCAnalyticsApi implements AnalyticsApi {
 
     public async fireStartIssueCreationEvent(source: string, product: Product): Promise<void> {
         return startIssueCreationEvent(source, product).then((e) => {
-            this._analyticsClient.sendTrackEvent(e);
-        });
-    }
-
-    public async fireBBIssueCreatedEvent(site: DetailedSiteInfo): Promise<void> {
-        return bbIssueCreatedEvent(site).then((e) => {
-            this._analyticsClient.sendTrackEvent(e);
-        });
-    }
-
-    public async fireBBIssueTransitionedEvent(site: DetailedSiteInfo): Promise<void> {
-        return bbIssueTransitionedEvent(site).then((e) => {
-            this._analyticsClient.sendTrackEvent(e);
-        });
-    }
-
-    public async fireBBIssueUrlCopiedEvent(): Promise<void> {
-        return bbIssueUrlCopiedEvent().then((e) => {
-            this._analyticsClient.sendTrackEvent(e);
-        });
-    }
-
-    public async fireBBIssueCommentEvent(site: DetailedSiteInfo): Promise<void> {
-        return bbIssueCommentEvent(site).then((e) => {
-            this._analyticsClient.sendTrackEvent(e);
-        });
-    }
-
-    public async fireBBIssueWorkStartedEvent(site: DetailedSiteInfo): Promise<void> {
-        return bbIssueWorkStartedEvent(site).then((e) => {
             this._analyticsClient.sendTrackEvent(e);
         });
     }

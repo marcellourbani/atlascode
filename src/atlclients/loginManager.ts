@@ -1,33 +1,33 @@
 import * as vscode from 'vscode';
 
+import { authenticatedEvent, editedEvent } from '../analytics';
+import { AnalyticsClient } from '../analytics-node-client/src/client.min.js';
+import { Container } from '../container';
+import { getAgent, getAxiosInstance } from '../jira/jira-client/providers';
+import { Logger } from '../logger';
+import { SiteManager } from '../siteManager';
 import {
     AccessibleResource,
     AuthInfo,
     AuthInfoState,
     BasicAuthInfo,
     DetailedSiteInfo,
+    isBasicAuthInfo,
+    isPATAuthInfo,
     OAuthInfo,
     OAuthProvider,
+    oauthProviderForSite,
     OAuthResponse,
     PATAuthInfo,
     Product,
     ProductBitbucket,
     ProductJira,
     SiteInfo,
-    isBasicAuthInfo,
-    isPATAuthInfo,
-    oauthProviderForSite,
 } from './authInfo';
-import { authenticatedEvent, editedEvent } from '../analytics';
-import { getAgent, getAxiosInstance } from '../jira/jira-client/providers';
-import { AnalyticsClient } from '../analytics-node-client/src/client.min.js';
-
-import { BitbucketAuthenticator } from './bitbucketAuthenticator';
 import { CredentialManager } from './authStore';
+import { BitbucketAuthenticator } from './bitbucketAuthenticator';
 import { JiraAuthentictor as JiraAuthenticator } from './jiraAuthenticator';
-import { Logger } from '../logger';
 import { OAuthDancer } from './oauthDancer';
-import { SiteManager } from '../siteManager';
 
 export class LoginManager {
     private _dancer: OAuthDancer = OAuthDancer.Instance;
@@ -45,16 +45,17 @@ export class LoginManager {
 
     // this is *only* called when login buttons are clicked by the user
     public async userInitiatedOAuthLogin(site: SiteInfo, callback: string, isOnboarding?: boolean): Promise<void> {
-        const provider = oauthProviderForSite(site)!;
+        const provider = oauthProviderForSite(site);
         if (!provider) {
             throw new Error(`No provider found for ${site.host}`);
         }
+
         const resp = await this._dancer.doDance(provider, site, callback);
-        this.saveDetails(provider, site, resp, isOnboarding);
+        await this.saveDetails(provider, site, resp, isOnboarding);
     }
 
     public async initRemoteAuth(state: Object) {
-        this._dancer.doInitRemoteDance(state);
+        await this._dancer.doInitRemoteDance(state);
     }
 
     public async finishRemoteAuth(code: string): Promise<void> {
@@ -67,7 +68,7 @@ export class LoginManager {
         const resp = await this._dancer.doFinishRemoteDance(provider, site, code);
 
         // TODO: change false here when this is reachable from the onboarding flow
-        this.saveDetails(provider, site, resp, false);
+        await this.saveDetails(provider, site, resp, false);
     }
 
     private async saveDetails(provider: OAuthProvider, site: SiteInfo, resp: OAuthResponse, isOnboarding?: boolean) {
@@ -89,13 +90,20 @@ export class LoginManager {
                 resp.accessibleResources,
             );
 
-            siteDetails.forEach(async (siteInfo) => {
-                await this._credentialManager.saveAuthInfo(siteInfo, oauthInfo);
-                this._siteManager.addSites([siteInfo]);
-                authenticatedEvent(siteInfo, isOnboarding).then((e) => {
-                    this._analyticsClient.sendTrackEvent(e);
-                });
-            });
+            await Promise.all(
+                siteDetails.map(async (siteInfo) => {
+                    await this._credentialManager.saveAuthInfo(siteInfo, oauthInfo);
+
+                    if (site.product.key === ProductJira.key) {
+                        this.updateHasResolutionField(siteInfo).then(() => this._siteManager.addSites([siteInfo]));
+                    } else {
+                        this._siteManager.addSites([siteInfo]);
+                    }
+                    authenticatedEvent(siteInfo, isOnboarding).then((e) => {
+                        this._analyticsClient.sendTrackEvent(e);
+                    });
+                }),
+            );
         } catch (e) {
             Logger.error(e, 'Error authenticating');
             vscode.window.showErrorMessage(`There was an error authenticating with provider '${provider}': ${e}`);
@@ -216,7 +224,7 @@ export class LoginManager {
         const username = isBasicAuthInfo(credentials) ? credentials.username : userId;
         const credentialId = CredentialManager.generateCredentialId(siteId, username);
 
-        const siteDetails = {
+        const siteDetails: DetailedSiteInfo = {
             product: site.product,
             isCloud: false,
             avatarUrl: avatarUrl,
@@ -231,6 +239,7 @@ export class LoginManager {
             customSSLCertPaths: site.customSSLCertPaths,
             pfxPath: site.pfxPath,
             pfxPassphrase: site.pfxPassphrase,
+            hasResolutionField: false,
         };
 
         if (site.product.key === ProductJira.key) {
@@ -250,8 +259,19 @@ export class LoginManager {
         }
 
         await this._credentialManager.saveAuthInfo(siteDetails, credentials);
+
+        if (site.product.key === ProductJira.key) {
+            await this.updateHasResolutionField(siteDetails);
+        }
+
         this._siteManager.addOrUpdateSite(siteDetails);
 
         return siteDetails;
+    }
+
+    private async updateHasResolutionField(siteInfo: DetailedSiteInfo): Promise<void> {
+        const client = await Container.clientManager.jiraClient(siteInfo);
+        const fields = await client.getFields();
+        siteInfo.hasResolutionField = fields.some((f) => f.id === 'resolution');
     }
 }

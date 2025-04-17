@@ -1,6 +1,6 @@
-import { createVerifier, base64URLEncode, sha256, basicAuth } from './strategyCrypto';
 import { OAuthProvider } from './authInfo';
-import { StrategyProps, OAuthStrategyData } from './strategyData';
+import { base64URLEncode, basicAuth, createVerifier, sha256 } from './strategyCrypto';
+import { OAuthStrategyData, StrategyProps } from './strategyData';
 
 export function strategyForProvider(provider: OAuthProvider): Strategy {
     switch (provider) {
@@ -64,7 +64,7 @@ export abstract class Strategy {
     abstract tokenRefreshData(refreshToken: string): string;
 }
 
-export class JiraStrategy extends Strategy {
+class JiraStrategy extends Strategy {
     public constructor(data: StrategyProps) {
         super(data);
     }
@@ -117,7 +117,7 @@ export class JiraStrategy extends Strategy {
     }
 }
 
-export class JiraDevStrategy extends JiraStrategy {
+class JiraDevStrategy extends JiraStrategy {
     public tokenAuthorizationData(code: string): string {
         const data = JSON.stringify({
             grant_type: 'authorization_code',
@@ -149,7 +149,7 @@ export class JiraDevStrategy extends JiraStrategy {
     }
 }
 
-export class BitbucketStrategy extends Strategy {
+class BitbucketStrategy extends Strategy {
     public constructor(data: StrategyProps) {
         super(data);
     }

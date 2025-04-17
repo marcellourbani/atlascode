@@ -2,6 +2,7 @@ import { fileCheckoutEvent, prCommentEvent, prTaskEvent } from 'src/analytics';
 import TurndownService from 'turndown';
 import { v4 } from 'uuid';
 import vscode, { commands, CommentThread, MarkdownString } from 'vscode';
+
 import { BitbucketMentionsCompletionProvider } from '../../bitbucket/bbMentionsCompletionProvider';
 import { clientForSite } from '../../bitbucket/bbUtils';
 import { BitbucketSite, Comment, emptyTask, Task } from '../../bitbucket/model';
@@ -282,7 +283,7 @@ export class PullRequestCommentController implements vscode.Disposable {
                     const newComment: Comment = await bbApi.pullrequests.editComment(
                         comment.site,
                         comment.prId,
-                        comment.body.toString(),
+                        this.extractCommentText(comment),
                         comment.id,
                         comment.commitHash,
                     );
@@ -308,6 +309,16 @@ export class PullRequestCommentController implements vscode.Disposable {
 
         await this.createOrUpdateThread(commentThreadId!, comment.parent!.uri, comment.parent!.range, comments);
         vscode.commands.executeCommand(Commands.RefreshPullRequestExplorerNode, vscode.Uri.parse(comment.prHref));
+    }
+
+    private extractCommentText(comment: PullRequestComment): string {
+        if (comment.body instanceof MarkdownString) {
+            return comment.body.value;
+        }
+        if (typeof comment.body === 'string') {
+            return comment.body;
+        }
+        throw new Error('Invalid comment body type');
     }
 
     async toggleCommentsVisibility(uri: vscode.Uri) {

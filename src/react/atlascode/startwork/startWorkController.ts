@@ -1,6 +1,7 @@
 import { defaultStateGuard, ReducerAction } from '@atlassianlabs/guipi-core-controller';
 import { Transition } from '@atlassianlabs/jira-pi-common-models';
 import React, { useCallback, useMemo, useReducer } from 'react';
+
 import { WorkspaceRepo } from '../../../bitbucket/model';
 import { CommonActionType } from '../../../lib/ipc/fromUI/common';
 import { StartWorkAction, StartWorkActionType } from '../../../lib/ipc/fromUI/startWork';
@@ -37,7 +38,7 @@ export interface StartWorkControllerApi {
     openSettings: (section?: ConfigSection, subsection?: ConfigSubSection) => void;
 }
 
-export const emptyApi: StartWorkControllerApi = {
+const emptyApi: StartWorkControllerApi = {
     postMessage: () => {},
     refresh: () => {},
     openLink: () => {},
@@ -62,16 +63,14 @@ const emptyState: StartWorkState = {
     customPrefixes: [],
 };
 
-export enum StartWorkUIActionType {
+enum StartWorkUIActionType {
     Init = 'init',
     Loading = 'loading',
 }
 
-export type StartWorkUIAction =
+type StartWorkUIAction =
     | ReducerAction<StartWorkUIActionType.Init, { data: StartWorkInitMessage }>
     | ReducerAction<StartWorkUIActionType.Loading, {}>;
-
-export type StartWorkChanges = { [key: string]: any };
 
 function reducer(state: StartWorkState, action: StartWorkUIAction): StartWorkState {
     switch (action.type) {

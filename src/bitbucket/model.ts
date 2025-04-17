@@ -1,9 +1,9 @@
 import { CancelToken } from 'axios';
+
 import { DetailedSiteInfo, emptySiteInfo } from '../atlclients/authInfo';
 import { PipelineApiImpl } from '../pipelines/pipelines';
 import { Remote, Repository } from '../typings/git';
 import { FileDiffQueryParams } from '../views/pullrequest/diffViewHelper';
-import { BitbucketIssuesApiImpl } from './bitbucket-cloud/bbIssues';
 
 export type BitbucketSite = {
     details: DetailedSiteInfo;
@@ -167,9 +167,11 @@ export type Commit = {
 
 export type BuildStatus = {
     name: string;
+    key: string;
     state: 'SUCCESSFUL' | 'FAILED' | 'INPROGRESS' | 'STOPPED';
     url: string;
     ts: string;
+    last_updated?: string;
 };
 
 export type MergeStrategy = {
@@ -209,10 +211,6 @@ export interface FileDiff {
         // NOT using Map here as Map does not serialize to JSON
         newPathContextMap: Record<string, number>;
     };
-
-    // Indicates whether or not the file has a conflict. Only defined on topic diffs - recent (approx 2022 and forward) BB server diffs.
-    // If it's undefined fall back to looking for FileStatus.CONFLICT
-    isConflicted?: boolean;
 }
 
 export type CreatePullRequestData = {
@@ -225,7 +223,9 @@ export type CreatePullRequestData = {
     closeSourceBranch: boolean;
 };
 
-export type ApprovalStatus = 'APPROVED' | 'UNAPPROVED' | 'NEEDS_WORK';
+// This is used to handle both bitbucket cloud and bitbucket server
+// The status is used to determine the state of the pull request
+export type ApprovalStatus = 'APPROVED' | 'UNAPPROVED' | 'CHANGES_REQUESTED' | 'NO_CHANGES_REQUESTED';
 
 export type PullRequestData = {
     siteDetails: DetailedSiteInfo;
@@ -247,12 +247,13 @@ export type PullRequestData = {
     title: string;
     htmlSummary: string;
     rawSummary: string;
-    ts: string;
-    updatedTs: string;
+    ts: string | number;
+    updatedTs: string | number;
     state: 'MERGED' | 'SUPERSEDED' | 'OPEN' | 'DECLINED';
     closeSourceBranch: boolean;
     taskCount: number;
     buildStatuses?: BuildStatus[];
+    draft: boolean;
 };
 
 export interface PullRequest {
@@ -263,7 +264,7 @@ export interface PullRequest {
     // sourceRemote: sourceRemote,
 }
 
-export const emptyPullRequestData: PullRequestData = {
+const emptyPullRequestData: PullRequestData = {
     siteDetails: emptySiteInfo,
     id: '',
     version: 0,
@@ -288,6 +289,7 @@ export const emptyPullRequestData: PullRequestData = {
     state: 'OPEN',
     closeSourceBranch: false,
     taskCount: 0,
+    draft: false,
 };
 export const emptyPullRequest: PullRequest = {
     site: emptyBitbucketSite,
@@ -306,31 +308,6 @@ export interface PaginatedComments {
     next?: string;
 }
 
-export interface PaginatedBitbucketIssues {
-    workspaceRepo: WorkspaceRepo;
-    site: BitbucketSite;
-    data: BitbucketIssue[];
-    next?: string;
-}
-
-export interface PaginatedBranchNames {
-    data: string[];
-    next?: string;
-}
-
-export type BitbucketIssue = {
-    site: BitbucketSite;
-    data: BitbucketIssueData;
-};
-
-export function isBitbucketIssue(a: any): a is BitbucketIssue {
-    return a && (<BitbucketIssue>a).site !== undefined && (<BitbucketIssue>a).data !== undefined;
-}
-
-export type BitbucketIssueData = {
-    state: string;
-    [k: string]: any;
-};
 export type BitbucketBranchingModel = any;
 
 export interface PullRequestApi {
@@ -349,6 +326,7 @@ export interface PullRequestApi {
     get(site: BitbucketSite, prId: string, workspaceRepo?: WorkspaceRepo): Promise<PullRequest>;
     getById(site: BitbucketSite, prId: number): Promise<PullRequest>;
     getChangedFiles(pr: PullRequest, spec?: string): Promise<FileDiff[]>;
+    getConflictedFiles(pr: PullRequest): Promise<string[]>;
     getCommits(pr: PullRequest): Promise<Commit[]>;
     getComments(pr: PullRequest, commitHash?: string): Promise<PaginatedComments>;
     editComment(
@@ -405,7 +383,6 @@ export interface RepositoriesApi {
 export interface BitbucketApi {
     repositories: RepositoriesApi;
     pullrequests: PullRequestApi;
-    issues?: BitbucketIssuesApiImpl;
     pipelines?: PipelineApiImpl;
 }
 

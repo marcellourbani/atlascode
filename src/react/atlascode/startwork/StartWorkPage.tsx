@@ -34,23 +34,24 @@ import SettingsIcon from '@material-ui/icons/Settings';
 import { Alert, AlertTitle, Autocomplete } from '@material-ui/lab';
 import Mustache from 'mustache';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { AnalyticsView } from 'src/analyticsTypes';
+import uuid from 'uuid';
+
+import { StartWorkAction, StartWorkActionType } from '../../../lib/ipc/fromUI/startWork';
 import { ConfigSection, ConfigSubSection } from '../../../lib/ipc/models/config';
 import { BranchType, emptyRepoData, RepoData } from '../../../lib/ipc/toUI/startWork';
 import { Branch } from '../../../typings/git';
+import { OnMessageEventPromise } from '../../../util/reactpromise';
+import { ConnectionTimeout } from '../../../util/time';
+import { RenderedContent } from '../../../webviews/components/RenderedContent';
 import { colorToLozengeAppearanceMap } from '../../vscode/theme/colors';
 import { VSCodeStyles, VSCodeStylesContext } from '../../vscode/theme/styles';
+import { AtlascodeErrorBoundary } from '../common/ErrorBoundary';
 import { ErrorDisplay } from '../common/ErrorDisplay';
 import Lozenge from '../common/Lozenge';
 import { PMFDisplay } from '../common/pmf/PMFDisplay';
 import { PrepareCommitTip } from '../common/PrepareCommitTip';
 import { StartWorkControllerContext, useStartWorkController } from './startWorkController';
-import { AtlascodeErrorBoundary } from '../common/ErrorBoundary';
-import { AnalyticsView } from 'src/analyticsTypes';
-import { RenderedContent } from '../../../webviews/components/RenderedContent';
-import { StartWorkAction, StartWorkActionType } from '../../../lib/ipc/fromUI/startWork';
-import { OnMessageEventPromise } from '../../../util/reactpromise';
-import { ConnectionTimeout } from '../../../util/time';
-import uuid from 'uuid';
 
 const useStyles = makeStyles((theme: Theme) => ({
     title: {
@@ -706,30 +707,30 @@ const StartWorkPage: React.FunctionComponent = () => {
                                                             </Grid>
                                                         </Grid>
                                                     </Grid>
+                                                    <Grid item>
+                                                        <Divider />
+                                                    </Grid>
+                                                    <Grid item>
+                                                        <Grid container spacing={1} direction="row">
+                                                            <Grid item>
+                                                                <Switch
+                                                                    color="primary"
+                                                                    size="small"
+                                                                    checked={pushBranchEnabled}
+                                                                    onClick={togglePushBranchEnabled}
+                                                                />
+                                                            </Grid>
+                                                            <Grid item>
+                                                                <Typography variant="h4">
+                                                                    <Box fontWeight="fontWeightBold">
+                                                                        Push the new branch to remote
+                                                                    </Box>
+                                                                </Typography>
+                                                            </Grid>
+                                                        </Grid>
+                                                    </Grid>
                                                 </Grid>
                                             </Collapse>
-                                        </Grid>
-                                        <Grid item hidden={submitState === 'submit-success'}>
-                                            <Divider />
-                                        </Grid>
-                                        <Grid item hidden={submitState === 'submit-success'}>
-                                            <Grid container spacing={1} direction="row">
-                                                <Grid item>
-                                                    <Switch
-                                                        color="primary"
-                                                        size="small"
-                                                        checked={pushBranchEnabled}
-                                                        onClick={togglePushBranchEnabled}
-                                                    />
-                                                </Grid>
-                                                <Grid item>
-                                                    <Typography variant="h4">
-                                                        <Box fontWeight="fontWeightBold">
-                                                            Push the new branch to remote
-                                                        </Box>
-                                                    </Typography>
-                                                </Grid>
-                                            </Grid>
                                         </Grid>
                                         <Grid item hidden={submitState === 'submit-success'}>
                                             <Button

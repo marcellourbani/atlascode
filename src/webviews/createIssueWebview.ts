@@ -1,4 +1,15 @@
-import { Action, onlineStatus } from '../ipc/messaging';
+import { emptyIssueType, IssueType, Project } from '@atlassianlabs/jira-pi-common-models';
+import { CreateMetaTransformerResult, FieldValues, IssueTypeUI, ValueType } from '@atlassianlabs/jira-pi-meta-models';
+import { decode } from 'base64-arraybuffer-es6';
+import { format } from 'date-fns';
+import FormData from 'form-data';
+import { commands, Position, Uri, ViewColumn } from 'vscode';
+
+import { issueCreatedEvent } from '../analytics';
+import { DetailedSiteInfo, emptySiteInfo, Product, ProductJira } from '../atlclients/authInfo';
+import { Commands } from '../commands';
+import { configuration } from '../config/configuration';
+import { Container } from '../container';
 import {
     CreateIssueAction,
     isCreateIssue,
@@ -6,25 +17,13 @@ import {
     isScreensForSite,
     isSetIssueType,
 } from '../ipc/issueActions';
-import { WebViewID } from '../lib/ipc/models/common';
-import { CreateMetaTransformerResult, FieldValues, IssueTypeUI, ValueType } from '@atlassianlabs/jira-pi-meta-models';
-import { DetailedSiteInfo, Product, ProductJira, emptySiteInfo } from '../atlclients/authInfo';
-import { IssueType, Project, emptyIssueType } from '@atlassianlabs/jira-pi-common-models';
-import { Position, Uri, ViewColumn, commands } from 'vscode';
-
-import { AbstractIssueEditorWebview } from './abstractIssueEditorWebview';
-import { BitbucketIssue } from '../bitbucket/model';
-import { Commands } from '../commands';
-import { Container } from '../container';
 import { CreateIssueData } from '../ipc/issueMessaging';
-import FormData from 'form-data';
-import { InitializingWebview } from './abstractWebview';
-import { Logger } from '../logger';
-import { configuration } from '../config/configuration';
+import { Action, onlineStatus } from '../ipc/messaging';
 import { fetchCreateIssueUI } from '../jira/fetchIssue';
-import { format } from 'date-fns';
-import { issueCreatedEvent } from '../analytics';
-import { decode } from 'base64-arraybuffer-es6';
+import { WebViewID } from '../lib/ipc/models/common';
+import { Logger } from '../logger';
+import { AbstractIssueEditorWebview } from './abstractIssueEditorWebview';
+import { InitializingWebview } from './abstractWebview';
 
 export interface PartialIssue {
     uri?: Uri;
@@ -32,7 +31,6 @@ export interface PartialIssue {
     onCreated?: (data: CommentData | BBData) => void;
     summary?: string;
     description?: string;
-    bbIssue?: BitbucketIssue;
 }
 
 export interface CommentData {
@@ -43,11 +41,10 @@ export interface CommentData {
 }
 
 export interface BBData {
-    bbIssue: BitbucketIssue;
     issueKey: string;
 }
 
-export const emptyCreateMetaResult: CreateMetaTransformerResult<DetailedSiteInfo> = {
+const emptyCreateMetaResult: CreateMetaTransformerResult<DetailedSiteInfo> = {
     selectedIssueType: emptyIssueType,
     issueTypeUIs: {},
     problems: {},
@@ -61,8 +58,7 @@ export class CreateIssueWebview
     private _partialIssue: PartialIssue | undefined;
     private _currentProject: Project | undefined;
     private _screenData: CreateMetaTransformerResult<DetailedSiteInfo>;
-    private _selectedIssueTypeId: string;
-    private _relatedBBIssue: BitbucketIssue | undefined;
+    private _selectedIssueTypeId: string | undefined;
     private _siteDetails: DetailedSiteInfo;
 
     constructor(extensionPath: string) {
@@ -114,9 +110,6 @@ export class CreateIssueWebview
 
         if (data) {
             this._screenData = emptyCreateMetaResult;
-            if (data.bbIssue) {
-                this._relatedBBIssue = data.bbIssue;
-            }
         } else {
             this._partialIssue = {};
         }
@@ -174,7 +167,7 @@ export class CreateIssueWebview
     }
 
     async handleSelectOptionCreated(fieldKey: string, newValue: any, nonce?: string): Promise<void> {
-        const issueTypeUI: IssueTypeUI<DetailedSiteInfo> = this._screenData.issueTypeUIs[this._selectedIssueTypeId];
+        const issueTypeUI: IssueTypeUI<DetailedSiteInfo> = this._screenData.issueTypeUIs[this._selectedIssueTypeId!];
 
         if (!Array.isArray(issueTypeUI.fieldValues[fieldKey])) {
             issueTypeUI.fieldValues[fieldKey] = [];
@@ -195,7 +188,7 @@ export class CreateIssueWebview
 
         issueTypeUI.fieldValues[fieldKey].push(newValue);
 
-        this._screenData.issueTypeUIs[this._selectedIssueTypeId] = issueTypeUI;
+        this._screenData.issueTypeUIs[this._selectedIssueTypeId!] = issueTypeUI;
 
         const optionMessage = {
             type: 'optionCreated',
@@ -293,7 +286,7 @@ export class CreateIssueWebview
 
         const selectOverrides = this.getValuesForExisitngKeys(
             this._screenData.issueTypeUIs[issueType.id],
-            this._screenData.issueTypeUIs[this._selectedIssueTypeId].selectFieldOptions,
+            this._screenData.issueTypeUIs[this._selectedIssueTypeId!].selectFieldOptions,
         );
         this._screenData.issueTypeUIs[issueType.id].selectFieldOptions = {
             ...this._screenData.issueTypeUIs[issueType.id].selectFieldOptions,
@@ -339,9 +332,6 @@ export class CreateIssueWebview
                 issueKey: issueKey,
                 summary: createdSummary,
             });
-            this.hide();
-        } else if (this._relatedBBIssue && this._partialIssue && this._partialIssue.onCreated) {
-            this._partialIssue.onCreated({ bbIssue: this._relatedBBIssue, issueKey: issueKey });
             this.hide();
         }
     }
@@ -474,7 +464,8 @@ export class CreateIssueWebview
                                 await client.addAttachments(resp.key, formData);
                             }
                             // TODO: [VSCODE-601] add a new analytic event for issue updates
-                            commands.executeCommand(Commands.RefreshJiraExplorer);
+                            commands.executeCommand(Commands.RefreshAssignedWorkItemsExplorer);
+                            commands.executeCommand(Commands.RefreshCustomJqlExplorer);
 
                             this.postMessage({
                                 type: 'issueCreated',
@@ -482,7 +473,6 @@ export class CreateIssueWebview
                                 nonce: msg.nonce,
                             });
 
-                            commands.executeCommand(Commands.RefreshJiraExplorer);
                             this.fireCallback(resp.key, payload.summary);
                         } catch (e) {
                             Logger.error(new Error(`error creating issue: ${e}`));
@@ -502,6 +492,7 @@ export class CreateIssueWebview
                         this._siteDetails,
                         this._currentProject,
                     );
+                    break;
                 }
                 default: {
                     break;

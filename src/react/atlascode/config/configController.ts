@@ -1,30 +1,30 @@
+import { defaultActionGuard, defaultStateGuard, ReducerAction } from '@atlassianlabs/guipi-core-controller';
+import { JqlAutocompleteRestData, Suggestion } from '@atlassianlabs/guipi-jira-components';
+import { FilterSearchResults, JQLErrors } from '@atlassianlabs/jira-pi-common-models';
+import React, { useCallback, useMemo, useReducer } from 'react';
+import { UIErrorInfo } from 'src/analyticsTypes';
+import { v4 } from 'uuid';
+
 import { AuthInfo, DetailedSiteInfo, SiteInfo } from '../../../atlclients/authInfo';
+import { CommonActionType } from '../../../lib/ipc/fromUI/common';
 import { ConfigAction, ConfigActionType } from '../../../lib/ipc/fromUI/config';
+import { KnownLinkID, WebViewID } from '../../../lib/ipc/models/common';
+import { ConfigSection, ConfigSubSection, ConfigTarget, FlattenedConfig } from '../../../lib/ipc/models/config';
 import {
     ConfigInitMessage,
     ConfigMessage,
     ConfigMessageType,
     ConfigResponse,
+    emptyConfigInitMessage,
     FilterSearchResponseMessage,
     JQLOptionsResponseMessage,
     JQLSuggestionsResponseMessage,
     SectionChangeMessage,
     SiteWithAuthInfo,
     ValidateJqlResponseMessage,
-    emptyConfigInitMessage,
 } from '../../../lib/ipc/toUI/config';
-import { ConfigSection, ConfigSubSection, ConfigTarget, FlattenedConfig } from '../../../lib/ipc/models/config';
-import { FilterSearchResults, JQLErrors } from '@atlassianlabs/jira-pi-common-models';
-import { JqlAutocompleteRestData, Suggestion } from '@atlassianlabs/guipi-jira-components';
-import { KnownLinkID, WebViewID } from '../../../lib/ipc/models/common';
-import { PostMessageFunc, useMessagingApi } from '../messagingApi';
-import React, { useCallback, useMemo, useReducer } from 'react';
-import { ReducerAction, defaultActionGuard, defaultStateGuard } from '@atlassianlabs/guipi-core-controller';
-
-import { CommonActionType } from '../../../lib/ipc/fromUI/common';
 import { ConnectionTimeout } from '../../../util/time';
-import { v4 } from 'uuid';
-import { UIErrorInfo } from 'src/analyticsTypes';
+import { PostMessageFunc, useMessagingApi } from '../messagingApi';
 
 export interface ConfigControllerApi {
     postMessage: PostMessageFunc<ConfigAction>;
@@ -128,7 +128,7 @@ export const emptyApi: ConfigControllerApi = {
     },
 };
 
-export const emptyFilterSearchResults: FilterSearchResults = {
+const emptyFilterSearchResults: FilterSearchResults = {
     filters: [],
     isLast: true,
     maxResults: 25,
@@ -151,7 +151,7 @@ const emptyState: ConfigState = {
     openSubSections: [],
 };
 
-export enum ConfigUIActionType {
+enum ConfigUIActionType {
     Init = 'init',
     SectionChange = 'sectionChange',
     ConfigChange = 'configChange',
@@ -160,7 +160,7 @@ export enum ConfigUIActionType {
     LocalChange = 'localChange',
 }
 
-export type ConfigUIAction =
+type ConfigUIAction =
     | ReducerAction<CommonActionType.SendAnalytics, { errorInfo: UIErrorInfo }>
     | ReducerAction<ConfigUIActionType.Init, { data: ConfigInitMessage }>
     | ReducerAction<ConfigUIActionType.ConfigChange, { config: FlattenedConfig; target: ConfigTarget }>

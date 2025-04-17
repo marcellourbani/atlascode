@@ -11,8 +11,10 @@ import {
     User,
 } from '@atlassianlabs/jira-pi-common-models';
 import { FieldValues, ValueType } from '@atlassianlabs/jira-pi-meta-models';
+import { decode } from 'base64-arraybuffer-es6';
 import FormData from 'form-data';
 import { commands, env } from 'vscode';
+
 import { issueCreatedEvent, issueUpdatedEvent, issueUrlCopiedEvent } from '../analytics';
 import { DetailedSiteInfo, emptySiteInfo, Product, ProductJira } from '../atlclients/authInfo';
 import { clientForSite } from '../bitbucket/bbUtils';
@@ -46,7 +48,6 @@ import { Logger } from '../logger';
 import { iconSet, Resources } from '../resources';
 import { AbstractIssueEditorWebview } from './abstractIssueEditorWebview';
 import { InitializingWebview } from './abstractWebview';
-import { decode } from 'base64-arraybuffer-es6';
 
 export class JiraIssueWebview
     extends AbstractIssueEditorWebview
@@ -321,7 +322,8 @@ export class JiraIssueWebview
                             });
                         });
 
-                        commands.executeCommand(Commands.RefreshJiraExplorer);
+                        commands.executeCommand(Commands.RefreshAssignedWorkItemsExplorer);
+                        commands.executeCommand(Commands.RefreshCustomJqlExplorer);
                     } catch (e) {
                         Logger.error(new Error(`error updating issue: ${e}`));
                         this.postMessage({
@@ -419,7 +421,9 @@ export class JiraIssueWebview
                             issueCreatedEvent(msg.site, resp.key).then((e) => {
                                 Container.analyticsClient.sendTrackEvent(e);
                             });
-                            commands.executeCommand(Commands.RefreshJiraExplorer);
+
+                            commands.executeCommand(Commands.RefreshAssignedWorkItemsExplorer);
+                            commands.executeCommand(Commands.RefreshCustomJqlExplorer);
                         } catch (e) {
                             Logger.error(new Error(`error creating issue: ${e}`));
                             this.postMessage({
@@ -456,7 +460,9 @@ export class JiraIssueWebview
                             ).then((e) => {
                                 Container.analyticsClient.sendTrackEvent(e);
                             });
-                            commands.executeCommand(Commands.RefreshJiraExplorer);
+
+                            commands.executeCommand(Commands.RefreshAssignedWorkItemsExplorer);
+                            commands.executeCommand(Commands.RefreshCustomJqlExplorer);
                         } catch (e) {
                             Logger.error(new Error(`error creating issue link: ${e}`));
                             this.postMessage({
@@ -499,7 +505,10 @@ export class JiraIssueWebview
                                     nonce: msg.nonce,
                                 },
                             });
-                            commands.executeCommand(Commands.RefreshJiraExplorer);
+
+                            commands.executeCommand(Commands.RefreshAssignedWorkItemsExplorer);
+                            commands.executeCommand(Commands.RefreshCustomJqlExplorer);
+
                             issueUpdatedEvent(
                                 this._issue.siteDetails,
                                 this._issue.key,

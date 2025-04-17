@@ -1,5 +1,3 @@
-'use strict';
-
 import { ATLASCODE_TEST_HOST } from '../../src/constants';
 
 export enum AuthChangeType {
@@ -19,7 +17,6 @@ export interface RemoveAuthInfoEvent extends AuthInfoEvent {
     type: AuthChangeType.Remove;
     product: Product;
     credentialId: string;
-    host: string;
 }
 
 export interface Product {
@@ -120,10 +117,8 @@ export interface DetailedSiteInfo extends SiteInfo {
     isCloud: boolean;
     userId: string;
     credentialId: string;
-}
-
-export function getSiteInfoKey(site: DetailedSiteInfo): string {
-    return `${site.product.key} - ${site.host} - ${site.credentialId}`;
+    /** Jira only -- Indicates if the site's schema contains a field named 'resolution' */
+    hasResolutionField: boolean;
 }
 
 // You MUST send source
@@ -174,6 +169,7 @@ export const emptySiteInfo: DetailedSiteInfo = {
     isCloud: true,
     userId: '',
     credentialId: '',
+    hasResolutionField: false,
 };
 
 export const emptyAccessibleResource: AccessibleResource = {

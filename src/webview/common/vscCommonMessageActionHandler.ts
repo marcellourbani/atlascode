@@ -1,5 +1,6 @@
 import { defaultActionGuard } from '@atlassianlabs/guipi-core-controller';
 import { env, Uri } from 'vscode';
+
 import { IntegrationsLinkParams } from '../../atlclients/authInfo';
 import { HTTPClient } from '../../bitbucket/httpClient';
 import { showIssue } from '../../commands/jira/showIssue';
@@ -85,10 +86,6 @@ export class VSCCommonMessageHandler implements CommonActionMessageHandler {
                     }
                     case 'pullRequest': {
                         this._analytics.firePrUrlCopiedEvent();
-                        break;
-                    }
-                    case 'bbIssue': {
-                        this._analytics.fireBBIssueUrlCopiedEvent();
                         break;
                     }
                 }

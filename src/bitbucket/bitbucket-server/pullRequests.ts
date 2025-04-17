@@ -1,4 +1,5 @@
 import { CancelToken } from 'axios';
+
 import { DetailedSiteInfo } from '../../atlclients/authInfo';
 import { configuration } from '../../config/configuration';
 import { Container } from '../../container';
@@ -487,6 +488,16 @@ export class ServerPullRequestApi implements PullRequestApi {
 
         return result;
     }
+    /**
+     *
+     * @param pr The Pull request for which conflict data is to be calculated
+     * @returns [''] -> Empty String Array
+     * We don't seem to have the concept of conflicted Files in Server from the getChangedFiles method above
+     * but this has been implemented here because Server extends the common interface PullRequestApi which has this method
+     */
+    async getConflictedFiles(pr: PullRequest): Promise<string[]> {
+        return [];
+    }
 
     async getCurrentUser(site: DetailedSiteInfo): Promise<User> {
         const userSlug = site.userId;
@@ -677,8 +688,8 @@ export class ServerPullRequestApi implements PullRequestApi {
             parentId: data.parentId,
             htmlContent: data.html ? data.html : data.text,
             rawContent: data.text,
-            ts: data.createdDate,
-            updatedTs: data.updatedDate,
+            ts: this.dataDateToCommentDate(data.createdDate),
+            updatedTs: this.dataDateToCommentDate(data.updatedDate),
             deleted: !!data.deleted,
             deletable: data.permittedOperations.deletable && commentBelongsToUser && !data.deleted,
             editable: data.permittedOperations.editable && commentBelongsToUser && !data.deleted,
@@ -695,6 +706,17 @@ export class ServerPullRequestApi implements PullRequestApi {
         };
     }
 
+    private dataDateToCommentDate(date: any): string {
+        switch (typeof date) {
+            case 'string':
+                return date;
+            case 'number':
+                return new Date(date).toISOString();
+            default:
+                return '';
+        }
+    }
+
     async getBuildStatuses(pr: PullRequest): Promise<BuildStatus[]> {
         const { data } = await this.client.get(`/rest/build-status/1.0/commits/${pr.data.source.commitHash}`, {
             markup: true,
@@ -706,6 +728,7 @@ export class ServerPullRequestApi implements PullRequestApi {
             state: val.state,
             url: val.url,
             ts: val.dateAdded,
+            key: val.key,
         }));
     }
 
@@ -830,13 +853,25 @@ export class ServerPullRequestApi implements PullRequestApi {
 
         const userSlug = pr.site.details.userId;
 
+        // The API uses different status values than the model
+        // CHANGES_REQUESTED -> NEEDS_WORK
         const { data } = await this.client.put(
             `/rest/api/1.0/projects/${ownerSlug}/repos/${repoSlug}/pull-requests/${pr.data.id}/participants/${userSlug}`,
             {
-                status: status,
+                status:
+                    status === 'CHANGES_REQUESTED'
+                        ? 'NEEDS_WORK'
+                        : status === 'NO_CHANGES_REQUESTED'
+                          ? 'UNAPPROVED'
+                          : status,
             },
         );
 
+        // The API returns the new status of the user,So this api call will return NEEDS_WORK
+        // which is the status stored as CHANGES_REQUESTED in the model
+        if (data.status === 'NEEDS_WORK') {
+            return 'CHANGES_REQUESTED';
+        }
         return data.status;
     }
 
@@ -983,7 +1018,7 @@ export class ServerPullRequestApi implements PullRequestApi {
                 participants: data.reviewers.map((reviewer: any) => ({
                     ...this.toUser(site.details, reviewer.user),
                     role: reviewer.role,
-                    status: reviewer.status,
+                    status: reviewer.status === 'NEEDS_WORK' ? 'CHANGES_REQUESTED' : reviewer.status,
                 })),
                 source: source,
                 destination: destination,
@@ -996,6 +1031,7 @@ export class ServerPullRequestApi implements PullRequestApi {
                 closeSourceBranch: false,
                 taskCount: taskCount,
                 buildStatuses: [],
+                draft: data.draft,
             },
         };
     }

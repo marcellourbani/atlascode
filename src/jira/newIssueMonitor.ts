@@ -1,7 +1,9 @@
 import { MinimalIssue } from '@atlassianlabs/jira-pi-common-models';
 import { format } from 'date-fns';
 import pSettle from 'p-settle';
+import { JQLEntry } from 'src/config/model';
 import { commands, window } from 'vscode';
+
 import { DetailedSiteInfo, ProductJira } from '../atlclients/authInfo';
 import { showIssue } from '../commands/jira/showIssue';
 import { Container } from '../container';
@@ -10,7 +12,12 @@ import { Logger } from '../logger';
 
 type JQLSettleResult = { jqlName: string; issues: MinimalIssue<DetailedSiteInfo>[] };
 export class NewIssueMonitor {
+    private readonly _jqlFetcher: () => JQLEntry[];
     private _timestamp = new Date();
+
+    constructor(jqlFetcher?: () => JQLEntry[]) {
+        this._jqlFetcher = jqlFetcher || (() => Container.jqlManager.notifiableJQLEntries());
+    }
 
     private addCreatedTimeToQuery(jqlQuery: string, ts: string): string {
         let newQuery: string = jqlQuery;
@@ -38,7 +45,7 @@ export class NewIssueMonitor {
 
         const ts = format(this._timestamp, 'yyyy-MM-dd HH:mm');
         try {
-            const enabledJQLs = Container.jqlManager.notifiableJQLEntries();
+            const enabledJQLs = this._jqlFetcher();
             const jqlPromises: Promise<JQLSettleResult>[] = [];
             enabledJQLs.forEach((entry) => {
                 jqlPromises.push(

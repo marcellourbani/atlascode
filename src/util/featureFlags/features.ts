@@ -1,23 +1,21 @@
-export enum Features {
+export const enum Features {
     EnableNewUriHandler = 'atlascode-enable-new-uri-handler',
-    EnableAuthUI = 'atlascode-enable-auth-ui',
+    NoOpFeature = 'atlascode-noop',
+    EnableErrorTelemetry = 'atlascode-send-error-telemetry',
 }
 
-export enum Experiments {
-    NewAuthUI = 'atlascode_new_auth_ui',
+export const enum Experiments {
+    AtlascodeAA = 'atlascode_aa_experiment',
 }
 
-export const ExperimentGates: ExperimentGate = {
-    [Experiments.NewAuthUI]: {
-        gate: 'atlascode_new_auth_ui',
-        parameter: 'isEnabled',
-        defaultValue: false,
+export const ExperimentGates: Record<Experiments, ExperimentPayload> = {
+    [Experiments.AtlascodeAA]: {
+        parameter: 'isEnabled2',
+        defaultValue: 'Default',
     },
 };
 
-type ExperimentPayload = { gate: string; parameter: string; defaultValue: any };
-type ExperimentGate = Record<string, ExperimentPayload>;
+type ExperimentPayload = { parameter: string; defaultValue: any };
 
-export type FeatureGateValues = Record<string, boolean>;
-
-export type ExperimentGateValues = Record<string, any>;
+export type FeatureGateValues = Record<Features, boolean>;
+export type ExperimentGateValues = Record<Experiments, any>;

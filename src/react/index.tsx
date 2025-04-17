@@ -2,6 +2,7 @@ import { CssBaseline, ThemeProvider } from '@material-ui/core';
 import React, { useCallback, useEffect, useState } from 'react';
 import * as ReactDOM from 'react-dom';
 import useConstant from 'use-constant';
+
 import AtlGlobalStyles from './atlascode/common/AtlGlobalStyles';
 import { AtlLoader } from './atlascode/common/AtlLoader';
 import { ErrorControllerContext, ErrorStateContext, useErrorController } from './atlascode/common/errorController';
@@ -25,14 +26,6 @@ const routes: Record<string, any> = {
     atlascodeOnboardingV2: React.lazy(
         () => import(/* webpackChunkName: "atlascodeOnboardingV2" */ './atlascode/onboarding/OnboardingPage'),
     ),
-    bitbucketIssuePageV2: React.lazy(
-        () => import(/* webpackChunkName: "bitbucketIssuePageV2" */ './atlascode/bbissue/BitbucketIssuePage'),
-    ),
-    createBitbucketIssuePageV2: React.lazy(
-        () =>
-            import(/* webpackChunkName: "createBitbucketIssuePageV2" */ './atlascode/bbissue/CreateBitbucketIssuePage'),
-    ),
-    welcomePageV2: React.lazy(() => import(/* webpackChunkName: "welcomePageV2" */ './atlascode/welcome/Welcome')),
     startWorkPageV2: React.lazy(
         () => import(/* webpackChunkName: "startWorkPageV2" */ './atlascode/startwork/StartWorkPage'),
     ),

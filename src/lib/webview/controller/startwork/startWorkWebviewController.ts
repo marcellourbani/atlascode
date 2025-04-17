@@ -1,13 +1,14 @@
 import { defaultActionGuard } from '@atlassianlabs/guipi-core-controller';
+
 import { ProductBitbucket } from '../../../../atlclients/authInfo';
 import { BitbucketBranchingModel } from '../../../../bitbucket/model';
+// eslint-disable-next-line no-restricted-imports
+import { Container } from '../../../../container';
 import { AnalyticsApi } from '../../../analyticsApi';
 import { CommonActionType } from '../../../ipc/fromUI/common';
 import { StartWorkAction, StartWorkActionType } from '../../../ipc/fromUI/startWork';
 import { WebViewID } from '../../../ipc/models/common';
 import { CommonMessage, CommonMessageType } from '../../../ipc/toUI/common';
-// eslint-disable-next-line no-restricted-imports
-import { Container } from '../../../../container';
 import {
     BranchType,
     emptyStartWorkIssueMessage,
@@ -23,10 +24,13 @@ import { formatError } from '../../formatError';
 import { CommonActionMessageHandler } from '../common/commonActionMessageHandler';
 import { MessagePoster, WebviewController } from '../webviewController';
 import { StartWorkActionApi } from './startWorkActionApi';
-export const id: string = 'atlascodeSettingsV2';
+
 const customBranchType: BranchType = { kind: 'Custom', prefix: '' };
 
 export class StartWorkWebviewController implements WebviewController<StartWorkIssueMessage> {
+    public readonly requiredFeatureFlags = [];
+    public readonly requiredExperiments = [];
+
     private isRefreshing = false;
     private initData: StartWorkIssueMessage;
 
@@ -40,6 +44,8 @@ export class StartWorkWebviewController implements WebviewController<StartWorkIs
     ) {
         this.initData = factoryData || emptyStartWorkIssueMessage;
     }
+
+    public onShown(): void {}
 
     public title(): string {
         return `Start work on ${this.initData.issue.key}`;

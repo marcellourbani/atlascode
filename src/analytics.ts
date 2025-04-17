@@ -1,8 +1,8 @@
 import { ScreenEvent, TrackEvent, UIEvent } from './analytics-node-client/src/types';
+import { UIErrorInfo } from './analyticsTypes';
 import { DetailedSiteInfo, isEmptySiteInfo, Product, ProductJira, SiteInfo } from './atlclients/authInfo';
 import { BitbucketIssuesTreeViewId, PullRequestTreeViewId } from './constants';
 import { Container } from './container';
-import { UIErrorInfo } from './analyticsTypes';
 
 // IMPORTANT
 // Make sure there is a corresponding event with the correct attributes in the Data Portal for any event created here.
@@ -78,14 +78,68 @@ export async function loggedOutEvent(site: DetailedSiteInfo): Promise<TrackEvent
     });
 }
 
-// Feature Flag Events
+// Error/diagnostics events
 
-export async function featureFlagClientInitializedEvent(): Promise<TrackEvent> {
-    return trackEvent('initialized', 'featureFlagClient');
+function sanitizeStackTrace(stack?: string): string | undefined {
+    return stack ? stack.replace(/\/Users\/[^/]+\//g, '/Users/<user>/') : stack;
 }
 
-export async function featureFlagClientInitializationFailedEvent(): Promise<TrackEvent> {
-    return trackEvent('initializationFailed', 'featureFlagClient');
+export async function errorEvent(error: Error | string): Promise<TrackEvent> {
+    const attributes: { name: string; message: string; stack?: string } =
+        typeof error === 'string'
+            ? { name: 'Error', message: error }
+            : { name: error.name || 'Error', message: error.message, stack: sanitizeStackTrace(error.stack) };
+
+    return trackEvent('errorEvent_v2', 'atlascode', { attributes });
+}
+
+// Feature Flag Events
+
+export const enum ClientInitializedErrorType {
+    // NoError = 0, // Don't expose this, only used internally
+    Failed = 1,
+    Skipped = 2,
+    IdMissing = 3,
+}
+
+export async function featureFlagClientInitializedEvent(success: true): Promise<TrackEvent>;
+export async function featureFlagClientInitializedEvent(
+    success: false,
+    errorType: ClientInitializedErrorType,
+    reason: string,
+): Promise<TrackEvent>;
+export async function featureFlagClientInitializedEvent(
+    success: boolean,
+    errorType?: ClientInitializedErrorType,
+    reason?: string,
+): Promise<TrackEvent> {
+    return trackEvent('initialized', 'featureFlagClient', {
+        attributes: { success, errorType: errorType ?? 0, reason },
+    });
+}
+
+// debugging event, meant to measure the exposure rate of a feature flag or an experiment
+export async function featureGateExposureBoolEvent(
+    ffName: string,
+    success: boolean,
+    value: boolean,
+    errorType: number,
+): Promise<TrackEvent> {
+    return trackEvent('gateExposureBool', 'featureFlagClient', {
+        attributes: { ffName, success, value, errorType },
+    });
+}
+
+// debugging event, meant to measure the exposure rate of a feature flag or an experiment
+export async function featureGateExposureStringEvent(
+    ffName: string,
+    success: boolean,
+    value: string,
+    errorType: number,
+): Promise<TrackEvent> {
+    return trackEvent('gateExposureString', 'featureFlagClient', {
+        attributes: { ffName, success, value, errorType },
+    });
 }
 
 // Jira issue events
@@ -133,28 +187,6 @@ export async function startIssueCreationEvent(source: string, product: Product):
 
 export async function searchIssuesEvent(product: Product): Promise<TrackEvent> {
     return trackEvent('searchIssues', 'issue', { attributes: { hostProduct: product.name } });
-}
-
-// Bitbucket issue events
-
-export async function bbIssueCreatedEvent(site: DetailedSiteInfo): Promise<TrackEvent> {
-    return instanceTrackEvent(site, 'created', 'bbIssue');
-}
-
-export async function bbIssueTransitionedEvent(site: DetailedSiteInfo): Promise<TrackEvent> {
-    return instanceTrackEvent(site, 'transitioned', 'bbIssue');
-}
-
-export async function bbIssueUrlCopiedEvent(): Promise<TrackEvent> {
-    return trackEvent('copied', 'bbIssueUrl');
-}
-
-export async function bbIssueCommentEvent(site: DetailedSiteInfo): Promise<TrackEvent> {
-    return instanceTrackEvent(site, 'created', 'bbIssueComment');
-}
-
-export async function bbIssueWorkStartedEvent(site: DetailedSiteInfo): Promise<TrackEvent> {
-    return instanceTrackEvent(site, 'workStarted', 'bbIssue');
 }
 
 // PR events
@@ -639,7 +671,7 @@ function event(action: string, actionSubject: string, attributes: any): any {
 
 function anyUserOrAnonymous<T>(e: Object): T {
     let newObj: Object;
-    const aaid = Container.siteManager.getFirstAAID();
+    const aaid = Container.siteManager?.getFirstAAID();
 
     if (aaid) {
         newObj = { ...e, ...{ userId: aaid, userIdType: 'atlassianAccount', anonymousId: Container.machineId } };

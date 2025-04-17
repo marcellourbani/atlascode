@@ -1,12 +1,17 @@
 import { defaultActionGuard } from '@atlassianlabs/guipi-core-controller';
-import { isBasicAuthInfo } from '../../../../atlclients/authInfo';
+// eslint-disable-next-line no-restricted-imports
+import { ConfigurationTarget, WebviewPanel } from 'vscode';
+
+import { configuration } from '../../../../../src/config/configuration';
+// eslint-disable-next-line no-restricted-imports
+import { Container } from '../../../../../src/container';
+import { isBasicAuthInfo, ProductBitbucket, ProductJira } from '../../../../atlclients/authInfo';
 import { AnalyticsApi } from '../../../analyticsApi';
 import { CommonAction, CommonActionType } from '../../../ipc/fromUI/common';
 import { OnboardingAction, OnboardingActionType } from '../../../ipc/fromUI/onboarding';
 import { WebViewID } from '../../../ipc/models/common';
 import { CommonMessage, CommonMessageType } from '../../../ipc/toUI/common';
-import { SectionChangeMessage } from '../../../ipc/toUI/config';
-import { OnboardingMessage, OnboardingMessageType } from '../../../ipc/toUI/onboarding';
+import { OnboardingInitMessage, OnboardingMessage, OnboardingMessageType } from '../../../ipc/toUI/onboarding';
 import { Logger } from '../../../logger';
 import { formatError } from '../../formatError';
 import { CommonActionMessageHandler } from '../common/commonActionMessageHandler';
@@ -14,9 +19,12 @@ import { MessagePoster, WebviewController } from '../webviewController';
 import { OnboardingActionApi } from './onboardingActionApi';
 
 export const id: string = 'atlascodeOnboardingV2';
-export const title: string = 'Getting Started';
+const title: string = 'Getting Started';
 
-export class OnboardingWebviewController implements WebviewController<SectionChangeMessage> {
+export class OnboardingWebviewController implements WebviewController<OnboardingInitMessage> {
+    public readonly requiredFeatureFlags = [];
+    public readonly requiredExperiments = [];
+
     private _messagePoster: MessagePoster;
     private _api: OnboardingActionApi;
     private _logger: Logger;
@@ -44,6 +52,18 @@ export class OnboardingWebviewController implements WebviewController<SectionCha
         this._messagePoster(message);
     }
 
+    public async onShown(panel: WebviewPanel): Promise<void> {
+        try {
+            await configuration.update('jira.enabled', undefined, ConfigurationTarget.Global);
+        } catch {}
+
+        // focus the atlassian extension panels when the onboarding view shows...
+        Container.focus();
+
+        // ...then focus back here
+        panel.reveal(undefined, false);
+    }
+
     public title(): string {
         return title;
     }
@@ -53,30 +73,27 @@ export class OnboardingWebviewController implements WebviewController<SectionCha
     }
 
     public async onSitesChanged(): Promise<void> {
-        const [jiraSites, bbSites] = await this._api.getSitesWithAuth();
         this.postMessage({
             type: OnboardingMessageType.SitesUpdate,
-            jiraSites: jiraSites,
-            bitbucketSites: bbSites,
+            jiraSitesConfigured: Container.siteManager.productHasAtLeastOneSite(ProductJira),
+            bitbucketSitesConfigured: Container.siteManager.productHasAtLeastOneSite(ProductBitbucket),
         });
     }
 
     private async invalidate() {
-        const [jiraSites, bbSites] = await this._api.getSitesWithAuth();
         const target = this._api.getConfigTarget();
         const cfg = this._api.flattenedConfigForTarget(target);
         this.postMessage({
             type: OnboardingMessageType.Init,
-            bitbucketSites: bbSites,
-            jiraSites: jiraSites,
-            isRemote: this._api.getIsRemote(),
+            jiraSitesConfigured: Container.siteManager.productHasAtLeastOneSite(ProductJira),
+            bitbucketSitesConfigured: Container.siteManager.productHasAtLeastOneSite(ProductBitbucket),
             target: target,
             config: cfg,
         });
     }
 
-    public update() {
-        //No initial data to send!
+    public update(data: OnboardingInitMessage) {
+        this.invalidate();
     }
 
     public async onMessageReceived(msg: OnboardingAction | CommonAction) {
@@ -94,14 +111,13 @@ export class OnboardingWebviewController implements WebviewController<SectionCha
                 break;
             }
             case OnboardingActionType.Login: {
-                let isCloud = true;
+                const isCloud = !isBasicAuthInfo(msg.authInfo);
                 this._analytics.fireAuthenticateButtonEvent(id, msg.siteInfo, isCloud);
                 try {
-                    if (isBasicAuthInfo(msg.authInfo)) {
-                        isCloud = false;
-                        await this._api.authenticateServer(msg.siteInfo, msg.authInfo);
-                    } else {
+                    if (isCloud) {
                         await this._api.authenticateCloud(msg.siteInfo, this._onboardingUrl);
+                    } else {
+                        await this._api.authenticateServer(msg.siteInfo, msg.authInfo);
                     }
                     this.postMessage({ type: OnboardingMessageType.LoginResponse });
                 } catch (e) {

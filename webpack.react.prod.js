@@ -94,14 +94,15 @@ module.exports = {
             'process.env.ATLASCODE_FX3_TARGET_APP': JSON.stringify(process.env.ATLASCODE_FX3_TARGET_APP),
             'process.env.ATLASCODE_FX3_TIMEOUT': JSON.stringify(process.env.ATLASCODE_FX3_TIMEOUT),
             'process.env.ATLASCODE_TEST_USER_API_TOKEN': JSON.stringify(process.env.ATLASCODE_TEST_USER_API_TOKEN),
+            'process.env.ATLASCODE_FF_OVERRIDES': JSON.stringify(process.env.ATLASCODE_FF_OVERRIDES),
+            'process.env.ATLASCODE_EXP_OVERRIDES_BOOL': JSON.stringify(process.env.ATLASCODE_EXP_OVERRIDES_BOOL),
+            'process.env.ATLASCODE_EXP_OVERRIDES_STRING': JSON.stringify(process.env.ATLASCODE_EXP_OVERRIDES_STRING),
             'process.env.CI': JSON.stringify(process.env.CI),
         }),
     ],
     performance: {
-        // About twice the default value of 244 Kib, to remove the warning
-        // Shouldn't be a problem since this is an extension
-        maxEntrypointSize: 512000,
-        maxAssetSize: 512000,
+        maxEntrypointSize: 262144,  // overridden to 256KiB, reccomended is 244KiB
+        maxAssetSize: 524288,       // overridden to 512KiB, reccomended is 244KiB
     },
     watchOptions: {
         ignored: /node_modules/,

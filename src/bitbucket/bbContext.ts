@@ -1,11 +1,12 @@
 import { Disposable, Event, EventEmitter, Uri } from 'vscode';
+
 import { DetailedSiteInfo, ProductBitbucket } from '../atlclients/authInfo';
 import { bbAPIConnectivityError } from '../constants';
 import { Container } from '../container';
 import { Logger } from '../logger';
 import { API as GitApi, Repository } from '../typings/git';
-import { CacheMap, Interval } from '../util/cachemap';
-import { BitbucketIssuesExplorer } from '../views/bbissues/bbIssuesExplorer';
+import { CacheMap } from '../util/cachemap';
+import { Time } from '../util/time';
 import { PullRequestCommentController } from '../views/pullrequest/prCommentController';
 import { PullRequestsExplorer } from '../views/pullrequest/pullRequestsExplorer';
 import { clientForSite, getBitbucketCloudRemotes, getBitbucketRemotes, workspaceRepoFor } from './bbUtils';
@@ -20,7 +21,6 @@ export class BitbucketContext extends Disposable {
     private _gitApi: GitApi;
     private _repoMap: Map<string, WorkspaceRepo> = new Map();
     private _pullRequestsExplorer: PullRequestsExplorer;
-    private _bitbucketIssuesExplorer: BitbucketIssuesExplorer;
     private _disposable: Disposable;
     private _currentUsers: CacheMap;
     private _pullRequestCache = new CacheMap();
@@ -31,7 +31,6 @@ export class BitbucketContext extends Disposable {
         super(() => this.dispose());
         this._gitApi = gitApi;
         this._pullRequestsExplorer = new PullRequestsExplorer(this);
-        this._bitbucketIssuesExplorer = new BitbucketIssuesExplorer(this);
         this._currentUsers = new CacheMap();
 
         Container.context.subscriptions.push(
@@ -49,7 +48,6 @@ export class BitbucketContext extends Disposable {
             this._gitApi.onDidOpenRepository(() => this.refreshRepos()),
             this._gitApi.onDidCloseRepository(() => this.refreshRepos()),
             this._pullRequestsExplorer,
-            this._bitbucketIssuesExplorer,
             this.prCommentController,
         );
 
@@ -61,7 +59,7 @@ export class BitbucketContext extends Disposable {
         if (!foundUser) {
             const bbClient = await clientForSite(site);
             foundUser = await bbClient.pullrequests.getCurrentUser(site.details)!;
-            this._currentUsers.setItem(site.details.host, foundUser, 10 * Interval.MINUTE);
+            this._currentUsers.setItem(site.details.host, foundUser, 10 * Time.MINUTES);
         }
 
         if (foundUser) {
@@ -80,7 +78,7 @@ export class BitbucketContext extends Disposable {
                 }),
             );
             const flatPrs = prs.reduce((prev, curr) => prev.concat(curr), []);
-            this._pullRequestCache.setItem('pullrequests', flatPrs, 5 * Interval.MINUTE);
+            this._pullRequestCache.setItem('pullrequests', flatPrs, 5 * Time.MINUTES);
         }
 
         return this._pullRequestCache.getItem<PullRequest[]>('pullrequests')!;
@@ -183,9 +181,6 @@ export class BitbucketContext extends Disposable {
     disposeForNow() {
         if (this._pullRequestsExplorer) {
             this._pullRequestsExplorer.dispose();
-        }
-        if (this._bitbucketIssuesExplorer) {
-            this._bitbucketIssuesExplorer.dispose();
         }
 
         this._onDidChangeBitbucketContext.dispose();
