@@ -38,6 +38,8 @@ npm version patch
 2) publish it:
 
    ```bash
+   npm i
+   npx vsce pack
    ts-node publish.ts
    ```
 

@@ -10,7 +10,7 @@
         "builds",
         "pull requests"
     ],
-    "version": "4.0.5",
+    "version": "4.0.6",
     "publisher": "atlassian",
     "license": "SEE LICENSE IN LICENSE",
     "homepage": "https://github.com/atlassian/atlascode/blob/main/HOMEPAGE.md",
