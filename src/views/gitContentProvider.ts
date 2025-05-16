@@ -1,10 +1,10 @@
 import pathlib from 'path';
-import { normalize } from 'src/normalize';
 import vscode from 'vscode';
 
 import { BitbucketContext } from '../bitbucket/bbContext';
 import { clientForSite } from '../bitbucket/bbUtils';
 import { Container } from '../container';
+import { normalize } from '../normalize';
 import { PRFileDiffQueryParams } from './pullrequest/diffViewHelper';
 
 //This class is responsible for fetching the text of a specific version of a file which may not be on your machine
