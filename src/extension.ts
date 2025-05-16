@@ -10,10 +10,9 @@ import { activate as activateCodebucket } from './codebucket/command/registerCom
 import { CommandContext, setCommandContext } from './commandContext';
 import { Commands, registerCommands } from './commands';
 import { Configuration, configuration, IConfig } from './config/configuration';
-import { GlobalStateVersionKey } from './constants';
+import { ExtensionId, GlobalStateVersionKey } from './constants';
 import { Container } from './container';
 import { registerAnalyticsClient, registerErrorReporting, unregisterErrorReporting } from './errorReporting';
-import { JQLManager } from './jira/jqlManager';
 import { provideCodeLenses } from './jira/todoObserver';
 import { Logger } from './logger';
 import { api } from './normalize';
@@ -25,7 +24,8 @@ import {
 } from './pipelines/yaml/pipelinesYamlHelper';
 import { registerResources } from './resources';
 import { GitExtension } from './typings/git';
-import { FeatureFlagClient } from './util/featureFlags';
+import { FeatureFlagClient, Features } from './util/featureFlags';
+import { NotificationManagerImpl } from './views/notifications/notificationManager';
 
 const AnalyticDelay = 5000;
 
@@ -34,7 +34,7 @@ export async function activate(context: ExtensionContext) {
 
     registerErrorReporting();
 
-    const atlascode = extensions.getExtension('atlassian.atlascode')!;
+    const atlascode = extensions.getExtension(ExtensionId)!;
     const atlascodeVersion = atlascode.packageJSON.version;
     const previousVersion = context.globalState.get<string>(GlobalStateVersionKey);
 
@@ -49,7 +49,7 @@ export async function activate(context: ExtensionContext) {
     try {
         Container.initialize(context, configuration.get<IConfig>(), atlascodeVersion);
 
-        registerAnalyticsClient(Container.analyticsClient);
+        activateErrorReporting();
         registerCommands(context);
         activateCodebucket(context);
 
@@ -62,7 +62,7 @@ export async function activate(context: ExtensionContext) {
             Container.siteManager.productHasAtLeastOneSite(ProductBitbucket),
         );
 
-        await JQLManager.backFillOldDetailedSiteInfos();
+        NotificationManagerImpl.getInstance().listen();
     } catch (e) {
         Logger.error(e, 'Error initializing atlascode!');
     }
@@ -98,6 +98,14 @@ export async function activate(context: ExtensionContext) {
         } ms`,
     );
     return api;
+}
+
+function activateErrorReporting(): void {
+    if (FeatureFlagClient.checkGate(Features.EnableErrorTelemetry)) {
+        registerAnalyticsClient(Container.analyticsClient);
+    } else {
+        unregisterErrorReporting();
+    }
 }
 
 async function activateBitbucketFeatures() {
@@ -147,7 +155,7 @@ async function showWelcomePage(version: string, previousVersion: string | undefi
             .showInformationMessage(`Jira and Bitbucket (Official) has been updated to v${version}`, 'Release notes')
             .then((userChoice) => {
                 if (userChoice === 'Release notes') {
-                    commands.executeCommand(Commands.ShowWelcomePage);
+                    commands.executeCommand('extension.open', ExtensionId, 'changelog');
                 }
             });
     }
@@ -171,7 +179,13 @@ async function sendAnalytics(version: string, globalState: Memento) {
         });
     }
 
-    launchedEvent(env.remoteName ? env.remoteName : 'local').then((e) => {
+    launchedEvent(
+        env.remoteName ? env.remoteName : 'local',
+        Container.siteManager.numberOfAuthedSites(ProductJira, true),
+        Container.siteManager.numberOfAuthedSites(ProductJira, false),
+        Container.siteManager.numberOfAuthedSites(ProductBitbucket, true),
+        Container.siteManager.numberOfAuthedSites(ProductBitbucket, false),
+    ).then((e) => {
         Container.analyticsClient.sendTrackEvent(e);
     });
 }
@@ -184,4 +198,5 @@ function showOnboardingPage() {
 export function deactivate() {
     unregisterErrorReporting();
     FeatureFlagClient.dispose();
+    NotificationManagerImpl.getInstance().stopListening();
 }

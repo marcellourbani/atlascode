@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 
 import { authenticatedEvent, editedEvent } from '../analytics';
 import { AnalyticsClient } from '../analytics-node-client/src/client.min.js';
-import { Container } from '../container';
 import { getAgent, getAxiosInstance } from '../jira/jira-client/providers';
 import { Logger } from '../logger';
 import { SiteManager } from '../siteManager';
@@ -93,19 +92,14 @@ export class LoginManager {
             await Promise.all(
                 siteDetails.map(async (siteInfo) => {
                     await this._credentialManager.saveAuthInfo(siteInfo, oauthInfo);
-
-                    if (site.product.key === ProductJira.key) {
-                        this.updateHasResolutionField(siteInfo).then(() => this._siteManager.addSites([siteInfo]));
-                    } else {
-                        this._siteManager.addSites([siteInfo]);
-                    }
+                    this._siteManager.addSites([siteInfo]);
                     authenticatedEvent(siteInfo, isOnboarding).then((e) => {
                         this._analyticsClient.sendTrackEvent(e);
                     });
                 }),
             );
         } catch (e) {
-            Logger.error(e, 'Error authenticating');
+            Logger.error(e, `Error authenticating with provider '${provider}'`);
             vscode.window.showErrorMessage(`There was an error authenticating with provider '${provider}': ${e}`);
         }
     }
@@ -135,9 +129,8 @@ export class LoginManager {
                     this._analyticsClient.sendTrackEvent(e);
                 });
             } catch (err) {
-                const errorString = `Error authenticating with ${site.product.name}: ${err}`;
-                Logger.error(new Error(errorString));
-                return Promise.reject(errorString);
+                Logger.error(err, `Error authenticating with ${site.product.name}`);
+                return Promise.reject(`Error authenticating with ${site.product.name}: ${err}`);
             }
         }
     }
@@ -150,9 +143,8 @@ export class LoginManager {
                     this._analyticsClient.sendTrackEvent(e);
                 });
             } catch (err) {
-                const errorString = `Error authenticating with ${site.product.name}: ${err}`;
-                Logger.error(new Error(errorString));
-                return Promise.reject(errorString);
+                Logger.error(err, `Error authenticating with ${site.product.name}`);
+                return Promise.reject(`Error authenticating with ${site.product.name}: ${err}`);
             }
         }
     }
@@ -239,7 +231,6 @@ export class LoginManager {
             customSSLCertPaths: site.customSSLCertPaths,
             pfxPath: site.pfxPath,
             pfxPassphrase: site.pfxPassphrase,
-            hasResolutionField: false,
         };
 
         if (site.product.key === ProductJira.key) {
@@ -260,18 +251,8 @@ export class LoginManager {
 
         await this._credentialManager.saveAuthInfo(siteDetails, credentials);
 
-        if (site.product.key === ProductJira.key) {
-            await this.updateHasResolutionField(siteDetails);
-        }
-
         this._siteManager.addOrUpdateSite(siteDetails);
 
         return siteDetails;
-    }
-
-    private async updateHasResolutionField(siteInfo: DetailedSiteInfo): Promise<void> {
-        const client = await Container.clientManager.jiraClient(siteInfo);
-        const fields = await client.getFields();
-        siteInfo.hasResolutionField = fields.some((f) => f.id === 'resolution');
     }
 }

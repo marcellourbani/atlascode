@@ -1,9 +1,93 @@
+### [Report an Issue](https://github.com/atlassian/atlascode/issues)
+
+---
+## What's new in 3.8.2
+
+### Improvement 
+
+- Remove the word "Labs" from the title of the extension
+
+## What's new in 3.8.1
+
+### Features
+
+- Banner notifications may be displayed if user is in an unauthenticated state. 
+-   Added rich text editing capabilities for Jira Issue editing and creation
+
+## What's new in 3.8.0
+
+### Improvements
+- Badge notifications may be displayed if user is in an unauthenticated state. 
+
+## What's new in 3.6.6
+
+-   Internal changes only
+
+## What's new in 3.6.5
+
+### Improvements
+
+-   Added support for opening a Jira Issue via URI in the form `vscode://atlassian.atlascode/openJiraIssue?key=<issueKey>&site=<siteHost>&source=<URI_source>`
+-   Added support for start working on a Jira Issue via URI in the form `vscode://atlassian.atlascode/startWorkOnJira?key=<issueKey>&site=<siteHost>&source=<URI_source>`
+
+## What's new in 3.6.4
+
+### Bug fixes
+
+-   Fixed "already registered id" error when rendering PR related issues in the Bitbucket Pull Requests side panel.
+
+## What's new in 3.6.3
+
+-   Internal changes only
+
+## What's new in 3.6.2
+
+### Bug fixes
+
+-   Fixed global window bug which affected polyglot/juptyer notebook users
+
+## What's new in 3.6.1
+
+### Features
+
+-   Added informational panel when user clicks on create PR link in terminal which asks whether to create PR in extension or continue to browser
+
+### Bug fixes
+
+-   Fixed bug where field validators in Create Issue Page crash page when there is a custom required number field
+
+## What's new in 3.6.0
+
+### Deprecations
+
+-   Following the official deprecation of Bitbucket issues, and their very low usage in our extension, we have removed the Bitbucket issues functionality from Atlascode.
+
+    Users who still need to use the Bitbucket issues functionality can manually install the latest version supporting it: v3.4.25.
+
+### Bug fixes
+
+-   Fixed bug where Epic/Parent links on Jira Issue Screen Navigation are not clickable
+
+## What's new in 3.4.25
+
+### Improvements
+
+-   The 'Release notes' button on the update notification now lands on the vscode markeplace page for Atlascode, Changelog tab.
+
+### Bug fixes
+
+-   Some Jira issues weren't loading due to poor handling of missing fields.
+
 ## What's new in 3.4.24
 
 ### Improvements
 
 -   Updated and improved styling in CreateIssueScreen
 -   Focus on the Atlascode UI panels when the Onboarding view triggers
+
+### Bug fixes:
+
+-   Fixed bug in Bitbucket DC for PRs with comments where the PR Details would not display.
 
 ## What's new in 3.4.23
 

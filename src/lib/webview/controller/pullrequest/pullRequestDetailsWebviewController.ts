@@ -5,7 +5,6 @@ import Axios from 'axios';
 import { DetailedSiteInfo } from '../../../../atlclients/authInfo';
 import {
     ApprovalStatus,
-    BitbucketIssue,
     BuildStatus,
     Comment,
     Commit,
@@ -191,31 +190,15 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                     return relatedJiraIssues;
                 });
 
-            const relatedBitbucketIssuesPromise = this.api
-                .fetchRelatedBitbucketIssues(this.pr, this.commits, this.pageComments)
-                .then((relatedBitbucketIssues: BitbucketIssue[]) => {
-                    this.postMessage({
-                        type: PullRequestDetailsMessageType.UpdateRelatedBitbucketIssues,
-                        relatedIssues: relatedBitbucketIssues,
-                    });
-                    return relatedBitbucketIssues;
-                });
-
             //Now we wait for all remaining promises in 2 batches. The reason for this is that some of
             //these promises are older than others, meaning they're more likely to have finished.
-            await Promise.all([
-                buildStatusPromise,
-                mergeStrategiesPromise,
-                relatedJiraIssuesPromise,
-                relatedBitbucketIssuesPromise,
-            ]);
+            await Promise.all([buildStatusPromise, mergeStrategiesPromise, relatedJiraIssuesPromise]);
             const tasksAndComments = await tasksPromise;
             this.pageComments = tasksAndComments.pageComments;
             this.inlineComments = tasksAndComments.inlineComments;
             this.tasks = tasksAndComments.tasks;
         } catch (e) {
-            const err = new Error(`error updating pull request: ${e}`);
-            this.logger.error(err);
+            this.logger.error(e, 'Error updating pull request');
             this.postMessage({ type: CommonMessageType.Error, reason: formatError(e) });
         } finally {
             this.isRefreshing = false;
@@ -232,7 +215,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                 try {
                     await this.invalidate();
                 } catch (e) {
-                    this.logger.error(new Error(`error refreshing pull request: ${e}`));
+                    this.logger.error(e, 'Error refreshing pull request');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error refreshing pull request'),
@@ -252,7 +235,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                     if (Axios.isCancel(e)) {
                         this.logger.warn(formatError(e));
                     } else {
-                        this.logger.error(new Error(`error fetching users: ${e}`));
+                        this.logger.error(e, 'Error fetching users');
                         this.postMessage({
                             type: CommonMessageType.Error,
                             reason: formatError(e, 'Error fetching users'),
@@ -270,7 +253,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                         reviewers: reviewers,
                     });
                 } catch (e) {
-                    this.logger.error(new Error(`error updating reviewers: ${e}`));
+                    this.logger.error(e, 'Error fetching users');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error fetching users'),
@@ -292,7 +275,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                         htmlSummary: pr.data.htmlSummary,
                     });
                 } catch (e) {
-                    this.logger.error(new Error(`error fetching users: ${e}`));
+                    this.logger.error(e, 'Error fetching users');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error fetching users'),
@@ -309,7 +292,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                         title: pr.data.title,
                     });
                 } catch (e) {
-                    this.logger.error(new Error(`error fetching users: ${e}`));
+                    this.logger.error(e, 'Error fetching users');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error fetching users'),
@@ -327,7 +310,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                         status: status,
                     });
                 } catch (e) {
-                    this.logger.error(new Error(`error updating approval status: ${e}`));
+                    this.logger.error(e, 'Error updating approval status');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error updating approval status'),
@@ -345,7 +328,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                         branchName: newBranchName,
                     });
                 } catch (e) {
-                    this.logger.error(new Error(`error checking out pull request branch: ${e}`));
+                    this.logger.error(e, 'Error checking out pull request');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error checking out pull request'),
@@ -368,7 +351,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                         comments: this.pageComments,
                     });
                 } catch (e) {
-                    this.logger.error(new Error(`error adding comment: ${e}`));
+                    this.logger.error(e, 'Error adding comment');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error adding comment'),
@@ -394,7 +377,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                         comments: this.pageComments,
                     });
                 } catch (e) {
-                    this.logger.error(new Error(`error editing comment: ${e}`));
+                    this.logger.error(e, 'Error editing comment');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error editing comment'),
@@ -417,7 +400,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                         comments: this.pageComments,
                     });
                 } catch (e) {
-                    this.logger.error(new Error(`error deleting comment: ${e}`));
+                    this.logger.error(e, 'Error deleting comment');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error deleting comment'),
@@ -447,7 +430,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                         comments: this.pageComments,
                     });
                 } catch (e) {
-                    this.logger.error(new Error(`error adding task: ${e}`));
+                    this.logger.error(e, 'Error adding task');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error adding task'),
@@ -475,7 +458,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                         comments: this.pageComments,
                     });
                 } catch (e) {
-                    this.logger.error(new Error(`error editing task: ${e}`));
+                    this.logger.error(e, 'Error editing task');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error editing task'),
@@ -498,7 +481,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                         comments: this.pageComments,
                     });
                 } catch (e) {
-                    this.logger.error(new Error(`error deleting task: ${e}`));
+                    this.logger.error(e, 'Error deleting task');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error deleting task'),
@@ -515,7 +498,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                     //Inline comments are passed in to avoid refetching them.
                     await this.api.openDiffViewForFile(this.pr, msg.fileDiff, this.inlineComments!);
                 } catch (e) {
-                    this.logger.error(new Error(`error opening diff: ${e}`));
+                    this.logger.error(e, 'Error opening diff');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error opening diff'),
@@ -536,7 +519,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                     this.pr = { ...this.pr, ...updatedPullRequest };
                     this.update();
                 } catch (e) {
-                    this.logger.error(new Error(`error merging pull request: ${e}`));
+                    this.logger.error(e, 'Error merging pull request');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error merging pull request'),
@@ -547,18 +530,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                 try {
                     await this.api.openJiraIssue(msg.issue);
                 } catch (e) {
-                    this.logger.error(new Error(`error opening jira issue: ${e}`));
-                    this.postMessage({
-                        type: CommonMessageType.Error,
-                        reason: formatError(e, 'Error opening jira issue'),
-                    });
-                }
-                break;
-            case PullRequestDetailsActionType.OpenBitbucketIssue:
-                try {
-                    await this.api.openBitbucketIssue(msg.issue);
-                } catch (e) {
-                    this.logger.error(new Error(`error opening jira issue: ${e}`));
+                    this.logger.error(e, 'Error opening jira issue');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error opening jira issue'),
@@ -570,7 +542,7 @@ export class PullRequestDetailsWebviewController implements WebviewController<Pu
                 try {
                     await this.api.openBuildStatus(this.pr, msg.buildStatus);
                 } catch (e) {
-                    this.logger.error(new Error(`error opening build status: ${e}`));
+                    this.logger.error(e, 'Error opening build status');
                     this.postMessage({
                         type: CommonMessageType.Error,
                         reason: formatError(e, 'Error opening build status'),

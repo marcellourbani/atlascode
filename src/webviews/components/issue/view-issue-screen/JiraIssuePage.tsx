@@ -6,15 +6,13 @@ import { FieldUI, InputFieldUI, SelectFieldUI, UIType, ValueType } from '@atlass
 import { Box } from '@material-ui/core';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import * as React from 'react';
-import { AnalyticsView } from 'src/analyticsTypes';
-import { AtlascodeErrorBoundary } from 'src/react/atlascode/common/ErrorBoundary';
-// NOTE: for now we have to use react-collapsible and NOT Panel because panel uses display:none
-// which totally screws up react-select when select boxes are in an initially hidden panel.
 import uuid from 'uuid';
 
+import { AnalyticsView } from '../../../../analyticsTypes';
 import { EditIssueAction, IssueCommentAction } from '../../../../ipc/issueActions';
 import { EditIssueData, emptyEditIssueData, isIssueCreated } from '../../../../ipc/issueMessaging';
 import { LegacyPMFData } from '../../../../ipc/messaging';
+import { AtlascodeErrorBoundary } from '../../../../react/atlascode/common/ErrorBoundary';
 import { readFilesContentAsync } from '../../../../util/files';
 import { ConnectionTimeout } from '../../../../util/time';
 import { AtlLoader } from '../../AtlLoader';
@@ -464,7 +462,7 @@ export default class JiraIssuePage extends AbstractIssueEditorPage<Emit, Accept,
                                     onItemClick={() =>
                                         this.handleOpenIssue({
                                             siteDetails: this.state.siteDetails,
-                                            key: this.state.fieldValues['parent'],
+                                            key: this.state.fieldValues['parent'].key,
                                         })
                                     }
                                 />
@@ -555,19 +553,14 @@ export default class JiraIssuePage extends AbstractIssueEditorPage<Emit, Accept,
         );
     }
     commonSidebar(): any {
-        const commonItems: SidebarItem[] = [
-            'assignee',
-            'reporter',
-            'labels',
-            'priority',
-            'components',
-            'fixVersions',
-        ].map((field) => {
-            return {
-                itemLabel: this.state.fields[field].name,
-                itemComponent: this.getInputMarkup(this.state.fields[field], true, field),
-            };
-        });
+        const commonItems: SidebarItem[] = ['assignee', 'reporter', 'labels', 'priority', 'components', 'fixVersions']
+            .filter((field) => !!this.state.fields[field])
+            .map((field) => {
+                return {
+                    itemLabel: this.state.fields[field].name,
+                    itemComponent: this.getInputMarkup(this.state.fields[field], true, field),
+                };
+            });
 
         const advancedItems: SidebarItem[] = this.advancedSidebarFields
             .map((field) => {

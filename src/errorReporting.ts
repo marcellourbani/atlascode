@@ -5,26 +5,74 @@ import { AnalyticsClient } from './analytics-node-client/src/client.min';
 import { TrackEvent } from './analytics-node-client/src/types';
 import { Logger } from './logger';
 
+const AtlascodeStackTraceHint = '/.vscode/extensions/atlassian.atlascode-';
+
 let nodeJsErrorReportingRegistered = false;
 let analyticsClientRegistered = false;
 
 let _logger_onError_eventRegistration: Disposable | undefined = undefined;
 
 let analyticsClient: AnalyticsClient | undefined;
-let eventQueue: Promise<TrackEvent>[] | undefined = [];
+let eventQueue: Promise<TrackEvent>[] = [];
 
-function errorHandler(error: Error | string): void {
+function safeExecute(body: () => void, finallyBody?: () => void): void {
     try {
-        Logger.debug('[LOGGED ERROR]', error);
+        body();
+    } catch {
+    } finally {
+        try {
+            if (finallyBody) {
+                finallyBody();
+            }
+        } catch {}
+    }
+}
 
-        const event = errorEvent(error);
+// we need a dedicated listener to be able to remove it during the unregister
+function uncaughtExceptionHandler(error: Error | string): void {
+    errorHandlerWithFilter(error, 'NodeJS.uncaughtException');
+}
+
+// we need a dedicated listener to be able to remove it during the unregister
+function uncaughtExceptionMonitorHandler(error: Error | string): void {
+    errorHandlerWithFilter(error, 'NodeJS.uncaughtExceptionMonitor');
+}
+
+// we need a dedicated listener to be able to remove it during the unregister
+function unhandledRejectionHandler(error: Error | string): void {
+    errorHandlerWithFilter(error, 'NodeJS.unhandledRejection');
+}
+
+function errorHandlerWithFilter(error: Error | string, capturedBy: string): void {
+    safeExecute(() => {
+        if (error instanceof Error && error.stack && error.stack.includes(AtlascodeStackTraceHint)) {
+            errorHandler(error, undefined, undefined, capturedBy);
+        }
+    });
+}
+
+function errorHandler(error: Error | string, errorMessage?: string, params?: string[], capturedBy?: string): void {
+    safeExecute(() => {
+        const formattedParams =
+            !params || params.length === 0 ? undefined : params.length === 1 ? params[0] : JSON.stringify(params);
+
+        safeExecute(() => Logger.debug('[LOGGED ERROR]', capturedBy, errorMessage, formattedParams, error));
+
+        let event: Promise<TrackEvent>;
+        if (typeof error === 'string') {
+            errorMessage = errorMessage ? `${errorMessage}: ${error}` : error;
+            event = errorEvent(errorMessage, undefined, capturedBy, formattedParams);
+        } else {
+            errorMessage = errorMessage || error.message;
+            event = errorEvent(errorMessage, error, capturedBy, formattedParams);
+        }
 
         if (analyticsClient) {
             event.then((e) => analyticsClient!.sendTrackEvent(e));
         } else {
-            eventQueue!.push(event);
+            eventQueue.push(event);
         }
-    } catch {}
+    });
 }
 
 export function registerErrorReporting(): void {
@@ -33,27 +81,32 @@ export function registerErrorReporting(): void {
     }
     nodeJsErrorReportingRegistered = true;
 
-    try {
-        process.addListener('uncaughtException', errorHandler);
-        process.addListener('uncaughtExceptionMonitor', errorHandler);
-        process.addListener('unhandledRejection', errorHandler);
+    safeExecute(() => {
+        process.addListener('uncaughtException', uncaughtExceptionHandler);
+        process.addListener('uncaughtExceptionMonitor', uncaughtExceptionMonitorHandler);
+        process.addListener('unhandledRejection', unhandledRejectionHandler);
 
-        _logger_onError_eventRegistration = Logger.onError((data) => errorHandler(data.error), undefined);
-    } catch {}
+        _logger_onError_eventRegistration = Logger.onError(
+            (data) => errorHandler(data.error, data.errorMessage, data.params, data.capturedBy),
+            undefined,
+        );
+    });
 }
 
 export function unregisterErrorReporting(): void {
-    try {
-        process.removeListener('uncaughtException', errorHandler);
-        process.removeListener('uncaughtExceptionMonitor', errorHandler);
-        process.removeListener('unhandledRejection', errorHandler);
+    safeExecute(
+        () => {
+            process.removeListener('uncaughtException', uncaughtExceptionHandler);
+            process.removeListener('uncaughtExceptionMonitor', uncaughtExceptionMonitorHandler);
+            process.removeListener('unhandledRejection', unhandledRejectionHandler);
 
-        _logger_onError_eventRegistration?.dispose();
-        _logger_onError_eventRegistration = undefined;
-    } catch {
-    } finally {
-        nodeJsErrorReportingRegistered = false;
-    }
+            _logger_onError_eventRegistration?.dispose();
+            _logger_onError_eventRegistration = undefined;
+        },
+        /* finally */ () => {
+            nodeJsErrorReportingRegistered = false;
+        },
+    );
 }
 
 export async function registerAnalyticsClient(client: AnalyticsClient): Promise<void> {
@@ -61,11 +114,12 @@ export async function registerAnalyticsClient(client: AnalyticsClient): Promise<
         analyticsClientRegistered = true;
 
         analyticsClient = client;
-        const queue = eventQueue!;
-        eventQueue = undefined;
 
         try {
-            await Promise.all(queue.map((event) => event.then((e) => client.sendTrackEvent(e))));
-        } catch {}
+            await Promise.all(eventQueue.map((event) => event.then((e) => client.sendTrackEvent(e))));
+        } catch {
+        } finally {
+            eventQueue = [];
+        }
     }
 }

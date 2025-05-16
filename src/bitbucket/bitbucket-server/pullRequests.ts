@@ -6,7 +6,7 @@ import { Container } from '../../container';
 import { CacheMap } from '../../util/cachemap';
 import { Time } from '../../util/time';
 import { getFileNameFromPaths } from '../../views/pullrequest/diffViewHelper';
-import { clientForSite } from '../bbUtils';
+import { clientForSite, encodePathParts } from '../bbUtils';
 import { HTTPClient } from '../httpClient';
 import {
     ApprovalStatus,
@@ -688,8 +688,8 @@ export class ServerPullRequestApi implements PullRequestApi {
             parentId: data.parentId,
             htmlContent: data.html ? data.html : data.text,
             rawContent: data.text,
-            ts: data.createdDate,
-            updatedTs: data.updatedDate,
+            ts: this.dataDateToCommentDate(data.createdDate),
+            updatedTs: this.dataDateToCommentDate(data.updatedDate),
             deleted: !!data.deleted,
             deletable: data.permittedOperations.deletable && commentBelongsToUser && !data.deleted,
             editable: data.permittedOperations.editable && commentBelongsToUser && !data.deleted,
@@ -704,6 +704,17 @@ export class ServerPullRequestApi implements PullRequestApi {
             children: [],
             tasks: [],
         };
+    }
+
+    private dataDateToCommentDate(date: any): string {
+        switch (typeof date) {
+            case 'string':
+                return date;
+            case 'number':
+                return new Date(date).toISOString();
+            default:
+                return '';
+        }
     }
 
     async getBuildStatuses(pr: PullRequest): Promise<BuildStatus[]> {
@@ -933,7 +944,8 @@ export class ServerPullRequestApi implements PullRequestApi {
             return cachedValue;
         }
 
-        const { data } = await this.client.getRaw(`/rest/api/1.0/projects/${ownerSlug}/repos/${repoSlug}/raw/${path}`, {
+        const url = `/rest/api/1.0/projects/${ownerSlug}/repos/${repoSlug}/raw/${encodePathParts(path)}`;
+        const { data } = await this.client.getRaw(url, {
             at: commitHash,
         });
 
@@ -1019,6 +1031,7 @@ export class ServerPullRequestApi implements PullRequestApi {
                 closeSourceBranch: false,
                 taskCount: taskCount,
                 buildStatuses: [],
+                draft: data.draft,
             },
         };
     }
