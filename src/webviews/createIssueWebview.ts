@@ -7,8 +7,8 @@ import { commands, Position, Uri, ViewColumn } from 'vscode';
 
 import { issueCreatedEvent } from '../analytics';
 import { DetailedSiteInfo, emptySiteInfo, Product, ProductJira } from '../atlclients/authInfo';
-import { Commands } from '../commands';
 import { configuration } from '../config/configuration';
+import { Commands } from '../constants';
 import { Container } from '../container';
 import {
     CreateIssueAction,
@@ -253,10 +253,12 @@ export class CreateIssueWebview
             const createData: CreateIssueData = this._screenData.issueTypeUIs[
                 this._selectedIssueTypeId
             ] as CreateIssueData;
+
             createData.type = 'update';
             createData.transformerProblems = Container.config.jira.showCreateIssueProblems
                 ? this._screenData.problems
                 : {};
+
             this.postMessage(createData);
         } catch (e) {
             Logger.error(e, 'error updating issue fields');

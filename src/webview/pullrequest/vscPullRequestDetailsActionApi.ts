@@ -19,8 +19,8 @@ import {
     Task,
     User,
 } from '../../bitbucket/model';
-import { Commands } from '../../commands';
 import { showIssue } from '../../commands/jira/showIssue';
+import { Commands } from '../../constants';
 import { Container } from '../../container';
 import { issueForKey } from '../../jira/issueForKey';
 import { transitionIssue } from '../../jira/transitionIssue';
@@ -261,7 +261,7 @@ export class VSCPullRequestDetailsActionApi implements PullRequestDetailsActionA
             if (isMinimalIssue(issue)) {
                 const transition = issue.transitions.find((t) => t.to.id === issue.status.id);
                 if (transition) {
-                    await transitionIssue(issue, transition);
+                    await transitionIssue(issue, transition, { source: 'mergePullRequest' });
                 }
             }
         });

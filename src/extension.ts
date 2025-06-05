@@ -8,9 +8,9 @@ import { startListening } from './atlclients/negotiate';
 import { BitbucketContext } from './bitbucket/bbContext';
 import { activate as activateCodebucket } from './codebucket/command/registerCommands';
 import { CommandContext, setCommandContext } from './commandContext';
-import { Commands, registerCommands } from './commands';
+import { registerCommands } from './commands';
 import { Configuration, configuration, IConfig } from './config/configuration';
-import { ExtensionId, GlobalStateVersionKey } from './constants';
+import { Commands, ExtensionId, GlobalStateVersionKey } from './constants';
 import { Container } from './container';
 import { registerAnalyticsClient, registerErrorReporting, unregisterErrorReporting } from './errorReporting';
 import { provideCodeLenses } from './jira/todoObserver';
@@ -24,7 +24,7 @@ import {
 } from './pipelines/yaml/pipelinesYamlHelper';
 import { registerResources } from './resources';
 import { GitExtension } from './typings/git';
-import { FeatureFlagClient, Features } from './util/featureFlags';
+import { Experiments, FeatureFlagClient, Features } from './util/featureFlags';
 import { NotificationManagerImpl } from './views/notifications/notificationManager';
 
 const AnalyticDelay = 5000;
@@ -73,7 +73,12 @@ export async function activate(context: ExtensionContext) {
 
     // new user for auth exp
     if (previousVersion === undefined) {
-        showOnboardingPage();
+        const expVal = FeatureFlagClient.checkExperimentValue(Experiments.AtlascodeOnboardingExperiment);
+        if (expVal) {
+            commands.executeCommand(Commands.ShowOnboardingFlow);
+        } else {
+            commands.executeCommand(Commands.ShowOnboardingPage);
+        }
     } else {
         showWelcomePage(atlascodeVersion, previousVersion);
     }
@@ -188,10 +193,6 @@ async function sendAnalytics(version: string, globalState: Memento) {
     ).then((e) => {
         Container.analyticsClient.sendTrackEvent(e);
     });
-}
-
-function showOnboardingPage() {
-    commands.executeCommand(Commands.ShowOnboardingPage);
 }
 
 // this method is called when your extension is deactivated

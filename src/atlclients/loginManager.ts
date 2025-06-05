@@ -28,6 +28,8 @@ import { BitbucketAuthenticator } from './bitbucketAuthenticator';
 import { JiraAuthentictor as JiraAuthenticator } from './jiraAuthenticator';
 import { OAuthDancer } from './oauthDancer';
 
+const CLOUD_TLD = '.atlassian.net';
+
 export class LoginManager {
     private _dancer: OAuthDancer = OAuthDancer.Instance;
     private _jiraAuthenticator: JiraAuthenticator;
@@ -43,14 +45,19 @@ export class LoginManager {
     }
 
     // this is *only* called when login buttons are clicked by the user
-    public async userInitiatedOAuthLogin(site: SiteInfo, callback: string, isOnboarding?: boolean): Promise<void> {
+    public async userInitiatedOAuthLogin(
+        site: SiteInfo,
+        callback: string,
+        isOnboarding?: boolean,
+        source?: string,
+    ): Promise<void> {
         const provider = oauthProviderForSite(site);
         if (!provider) {
             throw new Error(`No provider found for ${site.host}`);
         }
 
         const resp = await this._dancer.doDance(provider, site, callback);
-        await this.saveDetails(provider, site, resp, isOnboarding);
+        await this.saveDetails(provider, site, resp, isOnboarding, source);
     }
 
     public async initRemoteAuth(state: Object) {
@@ -70,7 +77,13 @@ export class LoginManager {
         await this.saveDetails(provider, site, resp, false);
     }
 
-    private async saveDetails(provider: OAuthProvider, site: SiteInfo, resp: OAuthResponse, isOnboarding?: boolean) {
+    private async saveDetails(
+        provider: OAuthProvider,
+        site: SiteInfo,
+        resp: OAuthResponse,
+        isOnboarding?: boolean,
+        source?: string,
+    ) {
         try {
             const oauthInfo: OAuthInfo = {
                 access: resp.access,
@@ -93,7 +106,7 @@ export class LoginManager {
                 siteDetails.map(async (siteInfo) => {
                     await this._credentialManager.saveAuthInfo(siteInfo, oauthInfo);
                     this._siteManager.addSites([siteInfo]);
-                    authenticatedEvent(siteInfo, isOnboarding).then((e) => {
+                    authenticatedEvent(siteInfo, isOnboarding, source).then((e) => {
                         this._analyticsClient.sendTrackEvent(e);
                     });
                 }),
@@ -120,12 +133,17 @@ export class LoginManager {
         return [];
     }
 
-    public async userInitiatedServerLogin(site: SiteInfo, authInfo: AuthInfo, isOnboarding?: boolean): Promise<void> {
+    public async userInitiatedServerLogin(
+        site: SiteInfo,
+        authInfo: AuthInfo,
+        isOnboarding?: boolean,
+        source?: string,
+    ): Promise<void> {
         if (isBasicAuthInfo(authInfo) || isPATAuthInfo(authInfo)) {
             try {
-                const siteDetails = await this.saveDetailsForServerSite(site, authInfo);
+                const siteDetails = await this.saveDetailsForSite(site, authInfo);
 
-                authenticatedEvent(siteDetails, isOnboarding).then((e) => {
+                authenticatedEvent(siteDetails, isOnboarding, source).then((e) => {
                     this._analyticsClient.sendTrackEvent(e);
                 });
             } catch (err) {
@@ -135,10 +153,10 @@ export class LoginManager {
         }
     }
 
-    public async updatedServerInfo(site: SiteInfo, authInfo: AuthInfo): Promise<void> {
+    public async updateInfo(site: SiteInfo, authInfo: AuthInfo): Promise<void> {
         if (isBasicAuthInfo(authInfo)) {
             try {
-                const siteDetails = await this.saveDetailsForServerSite(site, authInfo);
+                const siteDetails = await this.saveDetailsForSite(site, authInfo);
                 editedEvent(siteDetails).then((e) => {
                     this._analyticsClient.sendTrackEvent(e);
                 });
@@ -159,7 +177,7 @@ export class LoginManager {
         return '';
     }
 
-    private async saveDetailsForServerSite(
+    private async saveDetailsForSite(
         site: SiteInfo,
         credentials: BasicAuthInfo | PATAuthInfo,
     ): Promise<DetailedSiteInfo> {
@@ -233,6 +251,13 @@ export class LoginManager {
             pfxPassphrase: site.pfxPassphrase,
         };
 
+        if (site.host.endsWith(CLOUD_TLD)) {
+            // Special case to accomodate for API key login to cloud instances
+            siteDetails.isCloud = true;
+            siteDetails.userId = json.accountId;
+            siteDetails.id = await this.fetchCloudSiteId(siteDetails.host);
+        }
+
         if (site.product.key === ProductJira.key) {
             credentials.user = {
                 displayName: json.displayName,
@@ -254,5 +279,11 @@ export class LoginManager {
         this._siteManager.addOrUpdateSite(siteDetails);
 
         return siteDetails;
+    }
+
+    private async fetchCloudSiteId(host: string): Promise<string> {
+        const response = await fetch(`https://${host}/_edge/tenant_info`);
+        const data = await response.json();
+        return data.cloudId;
     }
 }

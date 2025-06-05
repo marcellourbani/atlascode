@@ -19,9 +19,9 @@ import { issueCreatedEvent, issueUpdatedEvent, issueUrlCopiedEvent } from '../an
 import { DetailedSiteInfo, emptySiteInfo, Product, ProductJira } from '../atlclients/authInfo';
 import { clientForSite } from '../bitbucket/bbUtils';
 import { PullRequestData } from '../bitbucket/model';
-import { Commands } from '../commands';
 import { postComment } from '../commands/jira/postComment';
 import { startWorkOnIssue } from '../commands/jira/startWorkOnIssue';
+import { Commands } from '../constants';
 import { Container } from '../container';
 import {
     EditIssueAction,
@@ -852,7 +852,7 @@ export class JiraIssueWebview
                         handled = true;
                         try {
                             // note, this will refresh the explorer
-                            await transitionIssue(msg.issue, msg.transition);
+                            await transitionIssue(msg.issue, msg.transition, { source: 'jiraIssueWebview' });
 
                             this._editUIData.fieldValues['status'] = msg.transition.to;
                             // we need to force an update in case any new tranisitions are available
